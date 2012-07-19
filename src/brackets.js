@@ -276,8 +276,8 @@ define(function (require, exports, module) {
     function _onReady() {
         // Add the platform (mac or win) to the body tag so we can have platform-specific CSS rules
         $("body").addClass("platform-" + brackets.platform);
-        
-        EditorManager.setEditorHolder($("#editor-holder"));
+
+        EditorManager.setPositionedEditorHolder($('#positioned-editor-holder'));
 
         // Let the user know Brackets doesn't run in a web browser yet
         if (brackets.inBrowser) {
