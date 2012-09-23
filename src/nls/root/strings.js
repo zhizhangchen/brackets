@@ -208,6 +208,7 @@ define({
 
     // Strings for main-view.html
     "EXPERIMENTAL_BUILD"                   : "Experimental Build",
+    "DEVELOPMENT_BUILD"                    : "Development Build",
     "JSLINT_ERRORS"                        : "JSLint Errors",
     "JSLINT_NO_ERRORS"                     : "No JSLint errors - good job!",
     "SEARCH_RESULTS"                       : "Search Results",

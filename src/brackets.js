@@ -90,7 +90,8 @@ define(function (require, exports, module) {
         UpdateNotification      = require("utils/UpdateNotification"),
         UrlParams               = require("utils/UrlParams").UrlParams,
         NativeFileSystem        = require("file/NativeFileSystem").NativeFileSystem,
-        PreferencesManager      = require("preferences/PreferencesManager");
+        PreferencesManager      = require("preferences/PreferencesManager"),
+        StringUtils             = require("utils/StringUtils");
 
     // Local variables
     var params                  = new UrlParams(),
@@ -268,10 +269,14 @@ define(function (require, exports, module) {
     }
     
     // Localize MainViewHTML and inject into <BODY> tag
+    var isDevBuild = StringUtils.endsWith(decodeURI(window.location.href), "/dev/src/index.html");
     var templateVars    = $.extend({
         ABOUT_ICON          : brackets.config.about_icon,
         APP_NAME_ABOUT_BOX  : brackets.config.app_name_about,
-        VERSION             : brackets.metadata.version
+        VERSION             : brackets.metadata.version,
+        BUILD_TYPE          : (isDevBuild ? Strings.DEVELOPMENT_BUILD : Strings.EXPERIMENTAL_BUILD),
+        // TODO: shows symlink location, not actual dev build location
+        BUILD_LOCATION      : (isDevBuild ? decodeURI(window.location.href) : "")
     }, Strings);
     
     $("body").html(Mustache.render(MainViewHTML, templateVars));
