@@ -460,10 +460,11 @@ define(function LiveDevelopment(require, exports, module) {
     }
 
     /** Open the Connection and go live */
-    function open() {
+    function open(urlWrapper) {
         var result = new $.Deferred(),
             promise = result.promise();
         var doc = _getCurrentDocument();
+        var url = urlWrapper ? urlWrapper(doc.root.url) : doc.root.url;
         var browserStarted = false;
         var retryCount = 0;
 
