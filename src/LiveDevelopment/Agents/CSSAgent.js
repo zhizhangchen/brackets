@@ -49,9 +49,8 @@ define(function CSSAgent(require, exports, module) {
         return PathUtils.parseUrl(url).hrefNoSearch;
     }
 
-    // WebInspector Event: Page.loadEventFired
-    function _onLoadEventFired(event, res) {
-        // res = {timestamp}
+    // WebInspector Event: Runtime.loadEventFired
+    function _onLoadingFinished(event, res) {
         _urlToStyle = {};
         Inspector.CSS.getAllStyleSheets(function onGetAllStyleSheets(res) {
             var i, header;
@@ -102,7 +101,7 @@ define(function CSSAgent(require, exports, module) {
     /** Initialize the agent */
     function load() {
         _load = new $.Deferred();
-        $(Inspector.Page).on("loadEventFired.CSSAgent", _onLoadEventFired);
+        $(Inspector.Network).on("loadingFinished.CSSAgent", _onLoadingFinished);
         return _load.promise();
     }
 
