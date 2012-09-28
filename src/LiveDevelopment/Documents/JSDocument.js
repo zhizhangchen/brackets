@@ -92,7 +92,8 @@ define(function JSDocumentModule(require, exports, module) {
 
     /** Triggered on change by the editor */
     JSDocument.prototype.onChange = function onChange(event, editor, change) {
-        var src = this.doc.getText();
+        // The remote debug engine will not work well without original line endings
+        var src = this.doc.getText(true);
         Inspector.Debugger.setScriptSource(this.script().scriptId, src, function onSetScriptSource(res) {
             $.each(ScriptAgent.contextIdsForScript(this.script().scriptId), function (i, contextId) {
                 Inspector.Runtime.evaluate("if($)$(\"canvas\").each(function(i,e){if(e.rerender)e.rerender()})",
