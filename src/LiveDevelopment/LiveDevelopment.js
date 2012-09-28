@@ -338,10 +338,11 @@ define(function LiveDevelopment(require, exports, module) {
     }
 
     /** Open the Connection and go live */
-    function open() {
+    function open(urlWrapper) {
         var result = new $.Deferred(),
             promise = result.promise();
         var doc = _getCurrentDocument();
+        var url = urlWrapper ? urlWrapper(doc.root.url) : doc.root.url;
         var browserStarted = false;
         var retryCount = 0;
 
@@ -368,7 +369,7 @@ define(function LiveDevelopment(require, exports, module) {
             }
 
             _setStatus(STATUS_CONNECTING);
-            Inspector.connectToURL(doc.root.url).then(result.resolve, function onConnectFail(err) {
+            Inspector.connectToURL(url).then(result.resolve, function onConnectFail(err) {
                 if (err === "CANCEL") {
                     result.reject(err);
                     return;
@@ -412,7 +413,7 @@ define(function LiveDevelopment(require, exports, module) {
                     // on Windows where Chrome can't be opened more than once with the
                     // --remote-debugging-port flag set.
                     NativeApp.openLiveBrowser(
-                        doc.root.url,
+                        url,
                         err !== FileError.ERR_NOT_FOUND
                     )
                         .done(function () {
@@ -440,7 +441,7 @@ define(function LiveDevelopment(require, exports, module) {
 
                 if (exports.status !== STATUS_ERROR) {
                     window.setTimeout(function retryConnect() {
-                        Inspector.connectToURL(doc.root.url).then(result.resolve, onConnectFail);
+                        Inspector.connectToURL(url).then(result.resolve, onConnectFail);
                     }, 500);
                 }
             });

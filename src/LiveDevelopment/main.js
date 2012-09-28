@@ -114,7 +114,7 @@ define(function main(require, exports, module) {
             LiveDevelopment.close();
             // TODO Ty: when checkmark support lands, remove checkmark
         } else {
-            LiveDevelopment.open();
+            LiveDevelopment.open.apply(LiveDevelopment, arguments);
             // TODO Ty: when checkmark support lands, add checkmark
         }
     }
