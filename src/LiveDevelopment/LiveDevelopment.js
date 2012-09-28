@@ -263,13 +263,17 @@ define(function LiveDevelopment(require, exports, module) {
      * @param {Document} source document to open
      */
     function _openDocument(doc, editor) {
+        var relatedURLs;
         _closeDocument();
         _liveDocument = _createDocument(doc, editor);
 
         // Gather related CSS documents.
-        // FUTURE: Gather related JS documents as well.
         _relatedDocuments = [];
-        agents.css.getStylesheetURLs().forEach(function (url) {
+        relatedURLs = agents.css.getStylesheetURLs();
+        if (exports.config.experimental)
+            // Gather related JS documents.
+            relatedURLs = $.merge([], relatedURLs, agents.script.getScriptURLs());
+        relatedURLs.forEach(function (url) {
             // FUTURE: when we get truly async file handling, we might need to prevent other
             // stuff from happening while we wait to add these listeners
             DocumentManager.getDocumentForPath(_urlToPath(url))
