@@ -38,6 +38,8 @@ define(function ScriptAgent(require, exports, module) {
     var _load; // the load promise
     var _urlToScript; // url -> script info
     var _idToScript; // id -> script info
+    var _frameToContextIds; // frame id -> context ids
+    var _idToContextIds; // id -> context ids
     var _insertTrace; // the last recorded trace of a DOM insertion
 
     /** Add a call stack trace to a node
@@ -64,12 +66,31 @@ define(function ScriptAgent(require, exports, module) {
     function scriptForURL(url) {
         return _urlToScript[url];
     }
+    function contextIdsForScript(scriptId) {
+        return _idToContextIds[scriptId];
+    }
+
+    /** Get a list of all loaded script files*/
+    function getScriptURLs() {
+        var urls = [], url;
+        for (url in _urlToScript) {
+            if (_urlToScript.hasOwnProperty(url)) {
+                urls.push(url);
+            }
+        }
+        return urls;
+    }
 
     // DOMAgent Event: Document root loaded
     function _onGetDocument(event, res) {
         Inspector.DOMDebugger.setDOMBreakpoint(res.root.nodeId, "subtree-modified");
         _load.resolve();
     }
+    function _onContextCreated(event, res) {
+        (_frameToContextIds[res.context.frameId] = _frameToContextIds[res.context.frameId] || [])
+            .push(res.context.id);
+    }
+
 
     // WebInspector Event: DOM.childNodeInserted
     function _onChildNodeInserted(event, res) {
@@ -86,7 +107,34 @@ define(function ScriptAgent(require, exports, module) {
     function _onScriptParsed(event, res) {
         // res = {scriptId, url, startLine, startColumn, endLine, endColumn, isContentScript, sourceMapURL}
         _idToScript[res.scriptId] = res;
-        _urlToScript[res.url] = res;
+        if (res.url) {
+            _urlToScript[res.url] = res;
+            Inspector.Page.getResourceTree(function onResourceTree(res) {
+                var idToFrames = {};
+                var mapIdToFrames = function (frame, idToFrames) {
+                    $.each(frame.resources, function (k, resource) {
+                        var script = _urlToScript[resource.url];
+                        if (script) {
+                            (idToFrames[script.scriptId] = idToFrames[script.scriptId] || [])
+                                .push(frame.frame.id);
+                        }
+                    });
+                    if (frame.childFrames)
+                        $.each(frame.childFrames, function (j, childFrame) {
+                            mapIdToFrames(childFrame, idToFrames);
+                        })
+                };
+                mapIdToFrames(res.frameTree, idToFrames);
+                _idToContextIds = {};
+                $.each(idToFrames, function (id, frameIds) {
+                    _idToContextIds[id] = [];
+                    $.each(frameIds, function (m, frameId) {
+                        _idToContextIds[id].push
+                            (_frameToContextIds[frameId][_frameToContextIds[frameId].length -1 ]);
+                    })
+                });
+            });
+        }
     }
 
     // WebInspector Event: Debugger.scriptFailedToParse
@@ -121,10 +169,13 @@ define(function ScriptAgent(require, exports, module) {
     function load() {
         _urlToScript = {};
         _idToScript = {};
+        _frameToContextIds = {};
         _load = new $.Deferred();
         Inspector.Debugger.enable();
         Inspector.Debugger.setPauseOnExceptions("uncaught");
         $(DOMAgent).on("getDocument.ScriptAgent", _onGetDocument);
+        Inspector.Runtime.setReportExecutionContextCreation(true);
+        $(Inspector.Runtime).on("isolatedContextCreated.ScriptAgent", _onContextCreated);
         $(Inspector.Debugger)
             .on("scriptParsed.ScriptAgent", _onScriptParsed)
             .on("scriptFailedToParse.ScriptAgent", _onScriptFailedToParse)
@@ -143,6 +194,8 @@ define(function ScriptAgent(require, exports, module) {
     // Export public functions
     exports.scriptWithId = scriptWithId;
     exports.scriptForURL = scriptForURL;
+    exports.contextIdsForScript = contextIdsForScript;
+    exports.getScriptURLs = getScriptURLs;
     exports.load = load;
     exports.unload = unload;
 });
