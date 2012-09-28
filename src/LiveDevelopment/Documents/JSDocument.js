@@ -94,7 +94,10 @@ define(function JSDocumentModule(require, exports, module) {
     JSDocument.prototype.onChange = function onChange(event, editor, change) {
         var src = this.doc.getText();
         Inspector.Debugger.setScriptSource(this.script().scriptId, src, function onSetScriptSource(res) {
-            Inspector.Runtime.evaluate("if($)$(\"canvas\").each(function(i,e){if(e.rerender)e.rerender()})");
+            $.each(ScriptAgent.contextIdsForScript(this.script().scriptId), function (i, contextId) {
+                Inspector.Runtime.evaluate("if($)$(\"canvas\").each(function(i,e){if(e.rerender)e.rerender()})",
+                    "",false, false, contextId);
+            });
         }.bind(this));
     };
 
