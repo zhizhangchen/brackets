@@ -48,6 +48,7 @@ define(function main(require, exports, module) {
 
     var config = {
         experimental: true, // enable experimental features
+        reuseDevToolsSocket: true, // resue DevTools' web socket for live development
         debug: true, // enable debug output and helpers
         autoconnect: false, // go live automatically after startup?
         highlight: false, // enable highlighting?
