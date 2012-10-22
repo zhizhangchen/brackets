@@ -89,7 +89,9 @@ define(function Inspector(require, exports, module) {
     var _messageId = 1; // id used for remote method calls, auto-incrementing
     var _messageCallbacks = {}; // {id -> function} for remote method calls
     var _socket; // remote debugger WebSocket
+
     var _connectDeferred; // The deferred connect
+    var EditorManager = require("editor/EditorManager");
 
     /** Check a parameter value against the given signature
      * This only checks for optional parameters, not types
@@ -147,6 +149,7 @@ define(function Inspector(require, exports, module) {
     function _onDisconnect() {
         _socket = undefined;
         $exports.triggerHandler("disconnect");
+        toggleDevTools(false);
     }
 
     /** WebSocket reported an error */
@@ -157,6 +160,7 @@ define(function Inspector(require, exports, module) {
     /** WebSocket did open */
     function _onConnect() {
         $exports.triggerHandler("connect");
+
     }
 
     /** Received message from the WebSocket
@@ -242,16 +246,52 @@ define(function Inspector(require, exports, module) {
         }
     }
 
+    function toggleDevTools(visible) {
+        $('#dev-tools').toggle(visible);
+        EditorManager.resizeEditor();
+    }
+
     /** Connect to the remote debugger WebSocket at the given URL
      * @param {string} WebSocket URL
      */
     function connect(socketURL) {
         disconnect();
-        _socket = new WebSocket(socketURL);
-        _socket.onmessage = _onMessage;
-        _socket.onopen = _onConnect;
-        _socket.onclose = _onDisconnect;
-        _socket.onerror = _onError;
+        if (!exports.config.reuseDevToolsSocket) {
+            _socket = new WebSocket(socketURL);
+            _socket.onmessage = _onMessage;
+            _socket.onopen = _onConnect;
+            _socket.onclose = _onDisconnect;
+            _socket.onerror = _onError;
+        }
+        else {
+            $('iframe').attr('src', "http://localhost:9222/devtools/devtools.html?" + socketURL.replace("ws://", "ws=")).load(function() {
+                var inspector = $(this).contents()[0].defaultView.WebInspector;
+                function wrapEvent(socket, event, extraHandler) {
+                    var oldEvent = socket[event];
+                    socket[event] = function () {
+                        extraHandler.apply(null, arguments);
+                        if (oldEvent)
+                            oldEvent.apply(null, arguments);
+                    }
+                };
+                _socket = $(this).contents()[0].defaultView.WebInspector.socket;
+                wrapEvent(_socket, "onmessage",_onMessage);
+                wrapEvent(_socket, "onopen", _onConnect);
+                wrapEvent(_socket, "onclose", _onDisconnect);
+                wrapEvent(_socket, "onerror", _onError);
+            });
+            toggleDevTools(true);
+            $('.content').layout({
+                applyDefaultStyles: true,
+                north__resizable: false,
+                north__showOverflowOnHover: true,
+                onresize: function () {
+                    EditorManager.resizeEditor();
+                }
+            });
+            $('#editor-holder').css('padding', '0');
+            EditorManager.resizeEditor();
+        }
     }
 
     /** Connect to the remote debugger of the page that is at the given URL

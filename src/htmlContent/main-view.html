@@ -65,7 +65,7 @@
         <!-- Right-hand content: toolbar, editor, bottom panels -->
         <div class="content">
             <!-- Toolbar containing menus, filename, and icons -->
-            <div id="main-toolbar" class="toolbar">
+            <div id="main-toolbar" class="toolbar ui-layout-north">
                 <!-- Menu bar -->
                 <ul class="nav" data-dropdown="dropdown">
                 </ul>
@@ -89,11 +89,12 @@
                 </div>
             </div>
             
-            <div id="editor-holder">
+            <div id="editor-holder" class="ui-layout-center">
                 <div id="not-editor">
                     <div id="not-editor-content">[&nbsp;&nbsp;]</div>
                 </div>
             </div>
+            <iframe id="dev-tools" class="bottom-panel ui-layout-south"/>
             
             <div id="jslint-results" class="bottom-panel">
                 <div class="toolbar simple-toolbar-layout">
