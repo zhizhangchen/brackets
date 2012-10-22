@@ -214,7 +214,8 @@ define(function DOMAgent(require, exports, module) {
     function _onSetChildNodes(event, res) {
         // res = {parentId, nodes}
         var node = nodeWithId(res.parentId);
-        node.setChildrenPayload(res.nodes);
+        if (node)
+            node.setChildrenPayload(res.nodes);
         if (_pendingRequests > 0 && --_pendingRequests === 0) {
             _onFinishedLoadingDOM();
         }
