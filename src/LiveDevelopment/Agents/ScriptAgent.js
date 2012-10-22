@@ -124,7 +124,8 @@ define(function ScriptAgent(require, exports, module) {
                             mapIdToFrames(childFrame, idToFrames);
                         })
                 };
-                mapIdToFrames(res.frameTree, idToFrames);
+                if (res.frameTree)
+                    mapIdToFrames(res.frameTree, idToFrames);
                 _idToContextIds = {};
                 $.each(idToFrames, function (id, frameIds) {
                     _idToContextIds[id] = [];
