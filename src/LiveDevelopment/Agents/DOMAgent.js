@@ -46,7 +46,7 @@ define(function DOMAgent(require, exports, module) {
     var DOMHelpers = require("LiveDevelopment/Agents/DOMHelpers");
 
     var _load; // {$.Deferred} load promise
-    var _idToNode; // {nodeId -> node}
+    var _idToNode = {}; // {nodeId -> node}
     var _pendingRequests; // {integer} number of pending requests before initial loading is complete
 
     /** Get the last node before the given location
