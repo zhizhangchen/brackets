@@ -190,6 +190,8 @@ define(function DOMAgent(require, exports, module) {
     // WebInspector Event: Page.loadEventFired
     function _onLoadEventFired(event, res) {
         // res = {timestamp}
+        if (Inspector.config.reuseDevToolsSocket)
+            return;
         Inspector.DOM.getDocument(function onGetDocument(res) {
             $exports.triggerHandler("getDocument", res);
             // res = {root}
