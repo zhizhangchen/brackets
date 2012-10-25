@@ -468,10 +468,13 @@ define(function LiveDevelopment(require, exports, module) {
         var result = new $.Deferred(),
             promise = result.promise();
         var doc = _getCurrentDocument();
-        var url = urlWrapper ? urlWrapper(doc.root.url) : doc.root.url;
+        var argUrl = urlWrapper ? urlWrapper(doc.root.url) : doc.root.url;
+        var url = argUrl.split(" ");
         var browserStarted = false;
         var retryCount = 0;
 
+        url = url[url.length - 1].split('-app=');
+        url = url[url.length - 1];
         function showWrongDocError() {
             Dialogs.showModalDialog(
                 Dialogs.DIALOG_ID_ERROR,
@@ -562,7 +565,7 @@ define(function LiveDevelopment(require, exports, module) {
                     // on Windows where Chrome can't be opened more than once with the
                     // --remote-debugging-port flag set.
                     NativeApp.openLiveBrowser(
-                        url,
+                        argUrl,
                         err !== FileError.ERR_NOT_FOUND
                     )
                         .done(function () {
