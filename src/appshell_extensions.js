@@ -189,6 +189,7 @@ if (!appshell.app) {
             var args = [];
             if (enableRemoteDebugging) {
                 args.push('--remote-debugging-port=9222');
+                args.push('--no-toolbar');
             }
             args.push("--url="+url);
             var newNw = child_process.spawn(process.execPath, args); 
