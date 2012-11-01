@@ -1,0 +1,12 @@
+{
+    "name"                  : "Brackets",
+    "main"                  : "src/index.html",
+    "window": {
+        "toolbar": false,
+        "width": 1000,
+        "height": 600,
+        "position": "mouse",
+        "min_width": 400,
+        "min_height": 200
+    }
+}
