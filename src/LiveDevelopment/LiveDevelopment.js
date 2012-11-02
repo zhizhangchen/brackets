@@ -551,7 +551,7 @@ define(function LiveDevelopment(require, exports, module) {
                 if (exports.status !== STATUS_ERROR) {
                     window.setTimeout(function retryConnect() {
                         Inspector.connectToURL(url).then(result.resolve, onConnectFail);
-                    }, 300);
+                    }, 100);
                 }
             });
         }
