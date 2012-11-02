@@ -158,7 +158,7 @@ if (!appshell.app) {
      */
     function ShowDeveloperTools(){alert("ShowDeveloperTools")};
     appshell.app.showDeveloperTools = function () {
-        ShowDeveloperTools();
+        gui.Window.get().showDevTools();
     };
 
     /**
