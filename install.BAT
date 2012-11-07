@@ -1,6 +1,6 @@
 @ECHO OFF
 set shortcut_name=Web IDE (Brackets)
-set execute_file=bracktes.bat
+set execute_file=brackets.bat
 set icon_file=brackets-128.png
 set program_path=%INSTALLED_PATH%\ide\brackets
 set execute_path=%program_path%\%execute_file%
