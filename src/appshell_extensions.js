@@ -222,6 +222,9 @@ if (!appshell.app) {
             }
             args.push("--url="+url);
             var newNw = child_process.spawn(process.execPath, args);
+            var nwWindow = gui.Window.get();
+            nwWindow.resizeTo(nwWindow.width, 450);
+            nwWindow.moveTo(gui.Window.get().x, 400);
             callback(newNw.pid > 0 ? 0: -1, newNw.pid)
         }, 0);
     };
