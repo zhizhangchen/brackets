@@ -113,6 +113,10 @@ define(function LiveDevelopment(require, exports, module) {
     var _liveDocument; // the document open for live editing.
     var _relatedDocuments; // CSS and JS documents that are used by the live HTML document
 
+    var _urlWrapper;
+    function setUrlWrapper(wrapper) {
+        _urlWrapper = wrapper;
+    }
     function _isHtmlFileExt(ext) {
         return (FileUtils.isStaticHtmlFileExt(ext) ||
                 (ProjectManager.getBaseUrl() && FileUtils.isServerHtmlFileExt(ext)));
@@ -420,11 +424,11 @@ define(function LiveDevelopment(require, exports, module) {
     }
 
     /** Open the Connection and go live */
-    function open(urlWrapper) {
+    function open() {
         var result = new $.Deferred(),
             promise = result.promise();
         var doc = _getCurrentDocument();
-        var argUrl = urlWrapper ? urlWrapper(doc.root.url) : doc.root.url;
+        var argUrl = _urlWrapper ? _urlWrapper(doc.root.url) : doc.root.url;
         var url = argUrl.split(" ");
         var browserStarted = false;
         var retryCount = 0;
@@ -666,5 +670,6 @@ define(function LiveDevelopment(require, exports, module) {
     exports.disableAgent        = disableAgent;
     exports.getLiveDocForPath   = getLiveDocForPath;
     exports.hideHighlight       = hideHighlight;
+    exports.setUrlWrapper       = setUrlWrapper;
     exports.init                = init;
 });
