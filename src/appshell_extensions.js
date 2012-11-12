@@ -63,6 +63,7 @@ if (!appshell.app) {
     appshell.app = {};
 }
 (function () {    
+    var liveBrowser;
     // Error values. These MUST be in sync with the error values
     // at the top of appshell_extensions_platform.h.
     
@@ -221,11 +222,11 @@ if (!appshell.app) {
                 args.push('--no-toolbar');
             }
             args.push("--url="+url);
-            var newNw = child_process.spawn(process.execPath, args);
+            liveBrowser = child_process.spawn(process.execPath, args);
             var nwWindow = gui.Window.get();
             nwWindow.resizeTo(nwWindow.width, 450);
             nwWindow.moveTo(gui.Window.get().x, 400);
-            callback(newNw.pid > 0 ? 0: -1, newNw.pid)
+            callback(liveBrowser.pid > 0 ? 0: -1, liveBrowser.pid)
         }, 0);
     };
     
@@ -242,9 +243,9 @@ if (!appshell.app) {
      *
      * @return None. This is an asynchronous call that sends all return information to the callback.
      */
-    function CloseLiveBrowser(){alert("CloseLiveBrowser")};
     appshell.app.closeLiveBrowser = function (callback) {
-        CloseLiveBrowser(callback);
+        process.kill(liveBrowser.pid, "SIGTERM");
+        callback(0);
     };
  
     /**
