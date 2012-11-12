@@ -469,7 +469,7 @@ define(function LiveDevelopment(require, exports, module) {
     }
 
     /** Open the Connection and go live */
-    function open() {
+    function open(useDevTool) {
         var result = new $.Deferred(),
             promise = result.promise();
         var doc = _getCurrentDocument();
@@ -524,7 +524,7 @@ define(function LiveDevelopment(require, exports, module) {
             var url = doc.root.url;
 
             _setStatus(STATUS_CONNECTING);
-            Inspector.connectToURL(url).done(result.resolve).fail(function onConnectFail(err) {
+            Inspector.connectToURL(url, useDevTool).done(result.resolve).fail(function onConnectFail(err) {
                 if (err === "CANCEL") {
                     result.reject(err);
                     return;
@@ -603,7 +603,7 @@ define(function LiveDevelopment(require, exports, module) {
                     
                 if (exports.status !== STATUS_ERROR) {
                     window.setTimeout(function retryConnect() {
-                        Inspector.connectToURL(url).done(result.resolve).fail(onConnectFail);
+                        Inspector.connectToURL(url, useDevTool).done(result.resolve).fail(onConnectFail);
                     }, 500);
                 }
             });
