@@ -117,8 +117,12 @@ define(function LiveDevelopment(require, exports, module) {
     var _relatedDocuments; // CSS and JS documents that are used by the live HTML document
 
     var _urlWrapper;
+    var _closeScript;
     function setUrlWrapper(wrapper) {
         _urlWrapper = wrapper;
+    }
+    function setCloseScript(script) {
+        _closeScript = script;
     }
     function _isHtmlFileExt(ext) {
         return (FileUtils.isStaticHtmlFileExt(ext) ||
@@ -614,7 +618,7 @@ define(function LiveDevelopment(require, exports, module) {
     /** Close the Connection */
     function close() {
         if (Inspector.connected()) {
-            Inspector.Runtime.evaluate("window.open('', '_self').close();");
+            Inspector.Runtime.evaluate(_closeScript || "window.open('', '_self').close();");
         }
         Inspector.disconnect();
         _setStatus(STATUS_INACTIVE);
@@ -718,5 +722,6 @@ define(function LiveDevelopment(require, exports, module) {
     exports.hideHighlight       = hideHighlight;
     exports.redrawHighlight     = redrawHighlight;
     exports.setUrlWrapper       = setUrlWrapper;
+    exports.setCloseScript       = setCloseScript;
     exports.init                = init;
 });
