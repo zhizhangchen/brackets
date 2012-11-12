@@ -63,7 +63,7 @@ if (!appshell.app) {
     appshell.app = {};
 }
 (function () {    
-    var liveBrowser;
+    var liveBrowser, fs;
     // Error values. These MUST be in sync with the error values
     // at the top of appshell_extensions_platform.h.
     
@@ -187,36 +187,7 @@ if (!appshell.app) {
     appshell.app.openLiveBrowser = function (url, enableRemoteDebugging, callback) {
         // enableRemoteDebugging flag is ignored on mac
         setTimeout(function() {
-            var args = [],
-                fs = appshell.fs,
-                requestFile = process.cwd() + '/request',
-                responseFile = process.cwd() + '/response';
-
-            if (!fs.existsSync(requestFile))
-                fs.closeSync(fs.openSync(requestFile, "w"));
-            fs.watch(requestFile, function (event, filename) {
-                var Inspector = require("LiveDevelopment/Inspector/Inspector");
-                console.log('event is: ' + event);
-                if (filename) {
-                    console.log('filename provided: ' + filename);
-                } else {
-                    console.log('filename not provided');
-                }
-                var request = fs.readFileSync(requestFile, "ascii");
-                console.log("request:", request);
-                if ( request === "disconnect") {
-                    console.log("try to disconnect inspector");
-                    if (Inspector.connected()) {
-                        Inspector.on("disconnect", function () {
-                            fs.writeFileSync(responseFile, "disconnected", "ascii");
-                        });
-                        Inspector.disconnect();
-                    }
-                    else
-                        fs.writeFileSync(responseFile, "disconnected", "ascii");
-                    fs.writeFileSync(requestFile, "", "ascii");
-               }
-            })
+            var args = [];
             if (enableRemoteDebugging) {
                 args.push('--remote-debugging-port=9222');
                 args.push('--no-toolbar');
@@ -295,6 +266,35 @@ if (!appshell.app) {
     appshell.app.showExtensionsFolder = function (appURL, callback) {
         ShowExtensionsFolder(callback, appURL);
     };
+    fs = appshell.fs,
+        requestFile = process.cwd() + '/request',
+        responseFile = process.cwd() + '/response';
+
+    if (!fs.existsSync(requestFile))
+        fs.closeSync(fs.openSync(requestFile, "w"));
+    fs.watch(requestFile, function (event, filename) {
+        var Inspector = require("LiveDevelopment/Inspector/Inspector");
+        console.log('event is: ' + event);
+        if (filename) {
+            console.log('filename provided: ' + filename);
+        } else {
+            console.log('filename not provided');
+        }
+        var request = fs.readFileSync(requestFile, "ascii");
+        console.log("request:", request);
+        if ( request === "disconnect") {
+            console.log("try to disconnect inspector");
+            if (Inspector.connected()) {
+                Inspector.on("disconnect", function () {
+                    fs.writeFileSync(responseFile, "disconnected", "ascii");
+                });
+                Inspector.disconnect();
+            }
+            else
+                fs.writeFileSync(responseFile, "disconnected", "ascii");
+            fs.writeFileSync(requestFile, "", "ascii");
+       }
+    })
  
     // Alias the appshell object to brackets. This is temporary and should be removed.
     brackets = appshell;
