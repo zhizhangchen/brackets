@@ -199,6 +199,10 @@ if (!appshell.app) {
             liveBrowser.on('close', function () {
                 liveBrowser = null;
             });
+            nwWindow.on('close', function() {
+                appshell.app.closeLiveBrowser();
+                nwWindow.close(true);
+            });
             //Ubuntu 11.10 Unity env
             if ((process.env["XDG_CURRENT_DESKTOP"] && process.env["XDG_CURRENT_DESKTOP"] === "Unity")
                 //Ubuntu 11.04 Unity env
