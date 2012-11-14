@@ -188,13 +188,19 @@ if (!appshell.app) {
         // enableRemoteDebugging flag is ignored on mac
         setTimeout(function() {
             var args = [];
+            var newHeight = screen.availHeight/2;
             if (enableRemoteDebugging) {
                 args.push('--remote-debugging-port=9222');
                 args.push('--no-toolbar');
             }
             args.push("--url="+url);
             liveBrowser = child_process.spawn(process.execPath, args);
-            window.resizeTo(window.outerWidth, screen.availHeight/2);
+            //Ubuntu 11.10 Unity env
+            if ((process.env["XDG_CURRENT_DESKTOP"] && process.env["XDG_CURRENT_DESKTOP"] === "Unity")
+                //Ubuntu 11.04 Unity env
+                || process.env["DESKTOP_SESSION"] === "gnome")
+                newHeight -= (window.outerHeight - window.innerHeight);
+            window.resizeTo(window.outerWidth, newHeight);
             window.moveTo((screen.availWidth - window.outerWidth)/2,
                  screen.availTop + screen.availHeight/2);
             callback(liveBrowser.pid > 0 ? 0: -1, liveBrowser.pid)
