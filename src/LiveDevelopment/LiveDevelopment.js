@@ -592,7 +592,7 @@ define(function LiveDevelopment(require, exports, module) {
             } else {
                 if (exports.config.experimental || _isHtmlFileExt(doc.extension)) {
                     close();
-                    window.setTimeout(open, 50);
+                    window.setTimeout(open, 300);
                 }
             }
             
