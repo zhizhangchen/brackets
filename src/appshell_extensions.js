@@ -189,6 +189,7 @@ if (!appshell.app) {
         setTimeout(function() {
             var args = [];
             var newHeight = screen.availHeight/2;
+            var nwWindow = gui.Window.get();
             if (enableRemoteDebugging) {
                 args.push('--remote-debugging-port=9222');
                 args.push('--no-toolbar');
@@ -201,7 +202,7 @@ if (!appshell.app) {
                 || process.env["DESKTOP_SESSION"] === "gnome")
                 newHeight -= (window.outerHeight - window.innerHeight);
             window.resizeTo(window.outerWidth, newHeight);
-            window.moveTo((screen.availWidth - window.outerWidth)/2,
+            nwWindow.moveTo((screen.availWidth - window.outerWidth)/2,
                  screen.availTop + screen.availHeight/2);
             callback(liveBrowser.pid > 0 ? 0: -1, liveBrowser.pid)
         }, 0);
