@@ -196,6 +196,9 @@ if (!appshell.app) {
             }
             args.push("--url="+url);
             liveBrowser = child_process.spawn(process.execPath, args);
+            liveBrowser.on('close', function () {
+                liveBrowser = null;
+            });
             //Ubuntu 11.10 Unity env
             if ((process.env["XDG_CURRENT_DESKTOP"] && process.env["XDG_CURRENT_DESKTOP"] === "Unity")
                 //Ubuntu 11.04 Unity env
@@ -222,8 +225,15 @@ if (!appshell.app) {
      * @return None. This is an asynchronous call that sends all return information to the callback.
      */
     appshell.app.closeLiveBrowser = function (callback) {
-        process.kill(liveBrowser.pid, "SIGTERM");
-        callback(0);
+        if (callback && liveBrowser) {
+            liveBrowser.on('close', function () {
+                callback(0);
+            });
+        }
+        else if (callback)
+            callback(-1);
+        if (liveBrowser)
+            process.kill(liveBrowser.pid, "SIGTERM");
     };
  
     /**
