@@ -1,0 +1,8 @@
+Package : brackets
+Label: Brackets (Web Editor)
+Version : 0.1.15
+Build-host-os : ubuntu-64
+Maintainer : John Chen <zhang.z.chen@intel.com>
+Attribute : root
+Source : brackets
+Description : Brackets with web simulator extension
