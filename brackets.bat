@@ -1,1 +1,1 @@
-start ..\nw_release_win32\nw .
+start ..\node-webkit\nw .
