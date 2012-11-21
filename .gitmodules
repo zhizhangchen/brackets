@@ -15,4 +15,4 @@
 	url = https://github.com/janl/mustache.js.git
 [submodule "src/extensions/default/everyscrub"]
 	path = src/extensions/default/everyscrub
-	url = https://github.com/peterflynn/everyscrub.git
+	url = git://github.com/peterflynn/everyscrub.git
