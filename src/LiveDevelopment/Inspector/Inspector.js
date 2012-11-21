@@ -251,6 +251,8 @@ define(function Inspector(require, exports, module) {
             $('#editor-holder').hide();
             $('#sidebar').hide();
             $('#sidebar-resizer').hide();
+            $('#status-bar').hide();
+            $('.nav').hide();
             $('<iframe frameborder="0" style="overflow:hidden;height:100%;width:100%" height="100%" width="100%"></iframe>')
                 .attr("src", "http://localhost:9222/devtools/devtools.html?" + socketURL.replace("ws://", "ws="))
                 .load(function() {
