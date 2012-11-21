@@ -251,7 +251,13 @@ if (!appshell.app) {
      * @return {string} Full path of the application support directory
      */
     appshell.app.getApplicationSupportDirectory = function () {
-        return process.env["APPDATA"]+"\\Adobe\\Brackets";
+        var groupName = "Adobe",
+            appName = "Brackets";
+        if (process.platform === "win32")
+            return process.env["APPDATA"]+ "\\" + groupName + "\\" + appName;
+        else
+            return process.env["HOME"]+"/Library/Application Support/"+ groupName
+                       + "/" + appName;
     }
 
     /**
