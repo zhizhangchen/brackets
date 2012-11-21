@@ -245,19 +245,41 @@ define(function Inspector(require, exports, module) {
     /** Connect to the remote debugger WebSocket at the given URL
      * @param {string} WebSocket URL
      */
-    function connect(socketURL) {
+    function connect(socketURL, useDevTool) {
         disconnect();
-        _socket = new WebSocket(socketURL);
-        _socket.onmessage = _onMessage;
-        _socket.onopen = _onConnect;
-        _socket.onclose = _onDisconnect;
-        _socket.onerror = _onError;
+        if (useDevTool) {
+            $('#editor-holder').hide();
+            $('#sidebar').hide();
+            $('#sidebar-resizer').hide();
+            $('<iframe frameborder="0" style="overflow:hidden;height:100%;width:100%" height="100%" width="100%"></iframe>')
+                .attr("src", "http://localhost:9222/devtools/devtools.html?" + socketURL.replace("ws://", "ws="))
+                .load(function() {
+                    $(this).contents().find('#toolbar').append(
+                        $('<button class="toolbar-item toggleable console"><div class="toolbar-icon"></div><div class="toolbar-label">Editor</div></button>')
+                            .click(function () {
+                                $('.main-view').show();
+                                $('#context-menu-bar').show();
+                                $('#codehint-menu-bar').show();
+                                $('iframe').hide();
+                            })
+                    )
+                })
+                .appendTo($('.content')).show();
+                $('.content').css('marginLeft', 0);
+        }
+        else {
+            _socket = new WebSocket(socketURL);
+            _socket.onmessage = _onMessage;
+            _socket.onopen = _onConnect;
+            _socket.onclose = _onDisconnect;
+            _socket.onerror = _onError;
+        }
     }
 
     /** Connect to the remote debugger of the page that is at the given URL
      * @param {string} url
      */
-    function connectToURL(url) {
+    function connectToURL(url, useDevTool) {
         if (_connectDeferred) {
             // reject an existing connection attempt
             _connectDeferred.reject("CANCEL");
@@ -273,7 +295,7 @@ define(function Inspector(require, exports, module) {
             for (i in response) {
                 page = response[i];
                 if (page.webSocketDebuggerUrl && page.url.indexOf(url) === 0) {
-                    connect(page.webSocketDebuggerUrl);
+                    connect(page.webSocketDebuggerUrl, useDevTool);
                     deferred.resolve();
                     return;
                 }
