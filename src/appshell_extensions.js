@@ -194,9 +194,8 @@ if (!appshell.app) {
             }
             args.push("--url="+url);
             liveBrowser = child_process.spawn(process.execPath, args);
-            var nwWindow = gui.Window.get();
-            nwWindow.resizeTo(nwWindow.width, 450);
-            nwWindow.moveTo(gui.Window.get().x, 400);
+            window.resizeTo(window.outerWidth, screen.availHeight/2);
+            window.moveTo(window.screenX, screen.availHeight/2);
             callback(liveBrowser.pid > 0 ? 0: -1, liveBrowser.pid)
         }, 0);
     };
