@@ -188,14 +188,16 @@ if (!appshell.app) {
         // enableRemoteDebugging flag is ignored on mac
         setTimeout(function() {
             var args = [];
+            var nwWindow = gui.Window.get();
             if (enableRemoteDebugging) {
                 args.push('--remote-debugging-port=9222');
                 args.push('--no-toolbar');
             }
             args.push("--url="+url);
             liveBrowser = child_process.spawn(process.execPath, args);
-            window.resizeTo(window.outerWidth, screen.availHeight/2);
-            window.moveTo(window.screenX, screen.availHeight/2);
+            nwWindow.height = screen.availHeight/2 - (window.outerHeight - window.innerHeight);
+            nwWindow.y = screen.availTop +  screen.availHeight/2;
+            nwWindow.x = (screen.availWidth - nwWindow.width)/2;
             callback(liveBrowser.pid > 0 ? 0: -1, liveBrowser.pid)
         }, 0);
     };
