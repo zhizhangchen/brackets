@@ -102,6 +102,8 @@ a, img {
 .toolbar {
     /* make sure the shadow goes above other items */
     z-index: @z-index-brackets-toolbar;
+    .box-flex(0);
+    top: 0px;
 }
 
 .busyCursor {
@@ -378,6 +380,11 @@ a, img {
     cursor: col-resize;
 } 
 
+#dev-tools {
+    display: none;
+    position: relative;
+    .box-flex(1);
+}
 #file-section {
     .vbox;
     .box-flex(1);

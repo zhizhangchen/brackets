@@ -118,6 +118,7 @@ define(function LiveDevelopment(require, exports, module) {
 
     var _urlWrapper;
     var _closeScript;
+    var _useDevTool;
     function setUrlWrapper(wrapper) {
         _urlWrapper = wrapper;
     }
@@ -440,6 +441,10 @@ define(function LiveDevelopment(require, exports, module) {
 
     /** Triggered by Inspector.connect */
     function _onConnect(event) {
+        if (_useDevTool) {
+            _onLoad();
+            return;
+        }
         $(Inspector.Inspector).on("detached", _onDetached);
         
         // Load agents
@@ -480,6 +485,7 @@ define(function LiveDevelopment(require, exports, module) {
         var url = argUrl.split(" ");
         var browserStarted = false;
         var retryCount = 0;
+        _useDevTool = useDevTool;
 
         url = url[url.length - 1].split('-app=');
         url = url[url.length - 1];
@@ -617,9 +623,7 @@ define(function LiveDevelopment(require, exports, module) {
 
     /** Close the Connection */
     function close() {
-        if (Inspector.connected()) {
-            Inspector.Runtime.evaluate(_closeScript || "window.open('', '_self').close();");
-        }
+        NativeApp.closeLiveBrowser();
         Inspector.disconnect();
         _setStatus(STATUS_INACTIVE);
     }

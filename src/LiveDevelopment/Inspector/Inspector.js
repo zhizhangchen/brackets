@@ -90,6 +90,8 @@ define(function Inspector(require, exports, module) {
     var _messageCallbacks = {}; // {id -> function} for remote method calls
     var _socket; // remote debugger WebSocket
     var _connectDeferred; // The deferred connect
+    var _devToolIframe;
+    var _editingElements;
 
     /** Check a parameter value against the given signature
      * This only checks for optional parameters, not types
@@ -140,12 +142,18 @@ define(function Inspector(require, exports, module) {
                 params[signature[i].name] = args[i];
             }
         }
-        _socket.send(JSON.stringify({ method: method, id: id, params: params }));
+        if (_socket)
+            _socket.send(JSON.stringify({ method: method, id: id, params: params }));
     }
 
     /** WebSocket did close */
     function _onDisconnect() {
         _socket = undefined;
+        if (_devToolIframe && _devToolIframe[0]) {
+            _toggleDevTools(false);
+            _devToolIframe.remove();
+        }
+        _devToolIframe = undefined;
         $exports.triggerHandler("disconnect");
     }
 
@@ -183,6 +191,22 @@ define(function Inspector(require, exports, module) {
         }
     }
 
+
+    /** Set the height of dev tool div */
+    function _setDevToolHeight() {
+        var toolbarHeight = $('#main-toolbar').outerHeight(); 
+        console.log("content height:" + $(".content").outerHeight());
+        console.log("toolbar height:" + toolbarHeight);
+        $("#dev-tools").height($(".content").outerHeight() - toolbarHeight);
+    }
+
+    function _toggleDevTools(show) {
+        if (show) {
+            _editingElements = $('.content > :not(#main-toolbar), #sidebar, #sidebar-resizer, #status-bar, .nav').filter(':visible');
+        }
+        _editingElements.toggle(!show);
+        $('#dev-tools').toggle(show);
+    }
 
     /** Public Functions *****************************************************/
 
@@ -240,6 +264,9 @@ define(function Inspector(require, exports, module) {
             }
             _socket = undefined;
         }
+        if (_devToolIframe && _devToolIframe[0]) {
+            _onDisconnect();
+        }
     }
 
     /** Connect to the remote debugger WebSocket at the given URL
@@ -248,23 +275,40 @@ define(function Inspector(require, exports, module) {
     function connect(socketURL, useDevTool) {
         disconnect();
         if (useDevTool) {
-            $('#editor-holder').hide();
-            $('#sidebar').hide();
-            $('#sidebar-resizer').hide();
-            $('<iframe frameborder="0" style="overflow:hidden;height:100%;width:100%" height="100%" width="100%"></iframe>')
+            var toolbar = $('#main-toolbar'),
+                toolbarHeight = toolbar.outerHeight();
+            _devToolIframe = $('<iframe frameborder="0" style="overflow:hidden;width:100%;height:100%" height="100%" width="100%"></iframe>')
                 .attr("src", "http://localhost:9222/devtools/devtools.html?" + socketURL.replace("ws://", "ws="))
                 .load(function() {
-                    $(this).contents().find('#toolbar').append(
-                        $('<button class="toolbar-item toggleable console"><div class="toolbar-icon"></div><div class="toolbar-label">Editor</div></button>')
-                            .click(function () {
-                                $('.main-view').show();
-                                $('#context-menu-bar').show();
-                                $('#codehint-menu-bar').show();
-                                $('iframe').hide();
-                            })
-                    )
+                    var inspector = $(this).contents()[0].defaultView.WebInspector;
+                    function wrapEvent(socket, event, extraHandler) {
+                        var oldEvent = socket[event];
+                        socket[event] = function () {
+                            extraHandler.apply(null, arguments);
+                            if (oldEvent)
+                                oldEvent.apply(null, arguments);
+                        }
+                    };
+                    var _socket = $(this).contents()[0].defaultView.WebInspector.socket;
+                    wrapEvent(_socket, "onmessage",_onMessage);
+                    wrapEvent(_socket, "onopen", _onConnect);
+                    wrapEvent(_socket, "onclose", _onDisconnect);
+                    wrapEvent(_socket, "onerror", _onError);
+
+                    /*$(this).contents().find('#toolbar').append(
+                      $('<button class="toolbar-item toggleable console"><div class="toolbar-icon"></div><div class="toolbar-label">Editor</div></button>')
+                      .click(function () {
+                      $('.main-view').show();
+                      $('#context-menu-bar').show();
+                      $('#codehint-menu-bar').show();
+                      $('iframe').hide();
+                      })
+                      )*/
+                    _toggleDevTools(true);
+                    _setDevToolHeight();
+                    _onConnect();
                 })
-                .appendTo($('.content')).show();
+                .appendTo($('#dev-tools'));
                 $('.content').css('marginLeft', 0);
         }
         else {
@@ -310,7 +354,7 @@ define(function Inspector(require, exports, module) {
 
     /** Check if the inspector is connected */
     function connected() {
-        return _socket !== undefined;
+        return _socket !== undefined || (_devToolIframe && _devToolIframe.parent()[0])
     }
 
     /** Initialize the Inspector
@@ -334,6 +378,12 @@ define(function Inspector(require, exports, module) {
             }
         };
         request.send(null);
+        $(window).resize(_setDevToolHeight);
+        setInterval(function () {
+            var toolbar = $('#main-toolbar');
+            toolbar.offset({top: 0, left: toolbar.offset().left});
+            $("#dev-tools").offset({top: toolbar.outerHeight(), left: toolbar.offset().left});
+        }, 500);
     }
 
     // Export public functions
