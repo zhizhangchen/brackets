@@ -107,9 +107,14 @@ define(function main(require, exports, module) {
 
     /** Handles clicks of the V8 toolbar button */
     function _onButtonClicked() {
-        LiveDevelopment.close();
-        CommandManager.execute(Commands.FILE_LIVE_FILE_PREVIEW, !_$debugging);
-        _$debugging = !_$debugging;
+        if (Inspector.connected()) {
+            LiveDevelopment.close();
+            _$debugging = false;
+        }
+        else {
+            _$debugging = true;
+            CommandManager.execute(Commands.FILE_LIVE_FILE_PREVIEW, true);
+        }
     }
     // --- Loaders and Unloaders ---
 
@@ -142,10 +147,16 @@ define(function main(require, exports, module) {
             _loadButton();
         });
         $(Inspector.Page).on("frameNavigated.dev-tools", _onFrameNavigated)
+        $(Inspector).on("connect", function () {
+            _$button.toggleClass("bridged", _$debugging);
+        });
+        $(Inspector).on("disconnect", function () {
+            _$debugging = false;
+            _$button.toggleClass("bridged", _$debugging);
+        });
     }
 
     function unload() {
-        _disconnect();
     }
 
 

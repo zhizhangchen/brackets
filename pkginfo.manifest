@@ -7,3 +7,4 @@ Attribute : root
 Source : brackets
 Description : Brackets with web simulator extension
 OS : macos-64
+OS : ubuntu-32
