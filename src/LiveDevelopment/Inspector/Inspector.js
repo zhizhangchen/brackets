@@ -91,6 +91,7 @@ define(function Inspector(require, exports, module) {
     var _socket; // remote debugger WebSocket
     var _connectDeferred; // The deferred connect
     var _devToolIframe;
+    var _editingElements;
 
     /** Check a parameter value against the given signature
      * This only checks for optional parameters, not types
@@ -200,14 +201,11 @@ define(function Inspector(require, exports, module) {
     }
 
     function _toggleDevTools(show) {
-        [$('#editor-holder'), $('#sidebar'), $('#sidebar-resizer'), 
-            $('#status-bar'), $('.nav')].forEach(function (el,i) {
-                    show ? el.hide(): el.show();
-            });
-        if (show)
-            $('#dev-tools').show();
-        else
-            $('#dev-tools').hide();
+        if (show) {
+            _editingElements = $('.content > :not(#main-toolbar), #sidebar, #sidebar-resizer, #status-bar, .nav').filter(':visible');
+        }
+        _editingElements.toggle(!show);
+        $('#dev-tools').toggle(show);
     }
 
     /** Public Functions *****************************************************/
