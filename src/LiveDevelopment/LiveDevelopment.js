@@ -602,7 +602,7 @@ define(function LiveDevelopment(require, exports, module) {
                 var editor = EditorManager.getCurrentFullEditor();
                 _openDocument(doc, editor);
             } else {
-                if (exports.config.experimental || _isHtmlFileExt(doc.extension)) {
+                if (_isHtmlFileExt(doc.extension)) {
                     close();
                     window.setTimeout(open, 300);
                 }
