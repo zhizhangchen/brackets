@@ -90,7 +90,7 @@ define(function Inspector(require, exports, module) {
     var _messageCallbacks = {}; // {id -> function} for remote method calls
     var _socket; // remote debugger WebSocket
     var _connectDeferred; // The deferred connect
-    var _devTool;
+    var _devToolIframe;
 
     /** Check a parameter value against the given signature
      * This only checks for optional parameters, not types
@@ -148,17 +148,11 @@ define(function Inspector(require, exports, module) {
     /** WebSocket did close */
     function _onDisconnect() {
         _socket = undefined;
-        if (_devTool && _devTool[0]) {
-            $('.content').css('marginLeft', "200");
-            $('#editor-holder').show();
-            $('#sidebar').show();
-            $('#sidebar-resizer').show();
-            $('#status-bar').show();
-            $('.nav').show();
-            _devTool.hide();
-            _devTool.remove();
+        if (_devToolIframe && _devToolIframe[0]) {
+            _toggleDevTools(false);
+            _devToolIframe.remove();
         }
-        _devTool = undefined;
+        _devToolIframe = undefined;
         $exports.triggerHandler("disconnect");
     }
 
@@ -196,6 +190,25 @@ define(function Inspector(require, exports, module) {
         }
     }
 
+
+    /** Set the height of dev tool div */
+    function _setDevToolHeight() {
+        var toolbarHeight = $('#main-toolbar').outerHeight(); 
+        console.log("content height:" + $(".content").outerHeight());
+        console.log("toolbar height:" + toolbarHeight);
+        $("#dev-tools").height($(".content").outerHeight() - toolbarHeight);
+    }
+
+    function _toggleDevTools(show) {
+        [$('#editor-holder'), $('#sidebar'), $('#sidebar-resizer'), 
+            $('#status-bar'), $('.nav')].forEach(function (el,i) {
+                    show ? el.hide(): el.show();
+            });
+        if (show)
+            $('#dev-tools').show();
+        else
+            $('#dev-tools').hide();
+    }
 
     /** Public Functions *****************************************************/
 
@@ -253,7 +266,7 @@ define(function Inspector(require, exports, module) {
             }
             _socket = undefined;
         }
-        if (_devTool && _devTool[0]) {
+        if (_devToolIframe && _devToolIframe[0]) {
             _onDisconnect();
         }
     }
@@ -265,14 +278,8 @@ define(function Inspector(require, exports, module) {
         disconnect();
         if (useDevTool) {
             var toolbar = $('#main-toolbar'),
-                toolbarHeight = toolbar.outerHeight(),
-                setDevToolHeight = function () {
-                    console.log("content height:" + $(".content").outerHeight());
-                    console.log("toolbar height:" + toolbarHeight);
-                    $("#dev-tools").height($(".content").outerHeight() - toolbarHeight);
-                };
-            setDevToolHeight();
-            _devTool = $('<iframe frameborder="0" style="overflow:hidden;width:100%;height:100%" height="100%" width="100%"></iframe>')
+                toolbarHeight = toolbar.outerHeight();
+            _devToolIframe = $('<iframe frameborder="0" style="overflow:hidden;width:100%;height:100%" height="100%" width="100%"></iframe>')
                 .attr("src", "http://localhost:9222/devtools/devtools.html?" + socketURL.replace("ws://", "ws="))
                 .load(function() {
                     var inspector = $(this).contents()[0].defaultView.WebInspector;
@@ -299,21 +306,11 @@ define(function Inspector(require, exports, module) {
                       $('iframe').hide();
                       })
                       )*/
-                    $('#editor-holder').hide();
-                    $('#sidebar').hide();
-                    $('#sidebar-resizer').hide();
-                    $('#status-bar').hide();
-                    $('.nav').hide();
+                    _toggleDevTools(true);
+                    _setDevToolHeight();
                     _onConnect();
                 })
-                .appendTo($('#dev-tools').show());
-                setInterval(function () {
-                    if (toolbar.offset().top !== 0) {
-                        toolbar.offset({top: 0, left: toolbar.offset().left});
-                        $("#dev-tools").offset( {top: toolbarHeight, left: 0});
-                    }
-                }, 500);
-                $(window).resize(setDevToolHeight);
+                .appendTo($('#dev-tools'));
                 $('.content').css('marginLeft', 0);
         }
         else {
@@ -359,7 +356,7 @@ define(function Inspector(require, exports, module) {
 
     /** Check if the inspector is connected */
     function connected() {
-        return _socket !== undefined || (_devTool && _devTool.parent()[0])
+        return _socket !== undefined || (_devToolIframe && _devToolIframe.parent()[0])
     }
 
     /** Initialize the Inspector
@@ -383,6 +380,12 @@ define(function Inspector(require, exports, module) {
             }
         };
         request.send(null);
+        $(window).resize(_setDevToolHeight);
+        setInterval(function () {
+            var toolbar = $('#main-toolbar');
+            toolbar.offset({top: 0, left: toolbar.offset().left});
+            $("#dev-tools").offset({top: toolbar.outerHeight(), left: toolbar.offset().left});
+        }, 500);
     }
 
     // Export public functions
