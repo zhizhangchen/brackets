@@ -262,7 +262,12 @@ define(function LiveDevelopment(require, exports, module) {
     function _createDocument(doc, editor) {
         var DocClass = _classForDocument(doc);
         if (DocClass) {
-            return new DocClass(doc, editor);
+             try {
+                 return new DocClass(doc, editor);
+             }catch (e) {
+                 console.warn("create document problem:" + doc);
+                 return null;
+             }
         } else {
             return null;
         }
