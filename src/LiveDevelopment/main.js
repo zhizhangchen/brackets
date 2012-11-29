@@ -76,21 +76,6 @@ define(function main(require, exports, module) {
     var _$btnGoLive; // reference to the GoLive button
     var _$btnHighlight; // reference to the HighlightButton
 
-    /** Load Live Development LESS Style */
-    function _loadStyles() {
-        var request = new XMLHttpRequest();
-        request.open("GET", "LiveDevelopment/main.less", true);
-        request.onload = function onLoad(event) {
-            var parser = new less.Parser();
-            parser.parse(request.responseText, function onParse(err, tree) {
-                console.assert(!err, err);
-                $("<style>" + tree.toCSS() + "</style>")
-                    .appendTo(window.document.head);
-            });
-        };
-        request.send(null);
-    }
-
     /**
      * Change the appearance of a button. Omit text to remove any extra text; omit style to return to default styling;
      * omit tooltip to leave tooltip unchanged.
@@ -197,7 +182,7 @@ define(function main(require, exports, module) {
 
         Inspector.init(config);
         LiveDevelopment.init(config);
-        _loadStyles();
+        require("utils/ExtensionUtils").loadLessFile(module, "main.less");
         _setupGoLiveButton();
         _setupGoLiveMenu();
 
