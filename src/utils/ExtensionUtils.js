@@ -31,6 +31,21 @@
 define(function (require, exports, module) {
     "use strict";
     
+    function getFileUrl(module, path) {
+        var modulePath = module.uri.substr(0, module.uri.lastIndexOf("/") + 1),
+            url = modulePath + path;
+
+            var getUrl = url;
+
+            if (brackets.platform === "win" && url.indexOf(":") !== -1) {
+                getUrl = "file:///" + url;
+            }
+            else
+                getUrl = "file://" + url;
+            return getUrl;
+
+    }
+
     /**
      * Loads a style sheet relative to the extension module.
      *
@@ -39,39 +54,51 @@ define(function (require, exports, module) {
      * @return {!$.Promise} A promise object that is resolved if the CSS file can be loaded.
      */
     function loadStyleSheet(module, path) {
-        var modulePath = module.uri.substr(0, module.uri.lastIndexOf("/") + 1),
-            url = encodeURI(modulePath + path),
-            result = new $.Deferred();
-
-        // Make a request for the same file in order to record success or failure.
-        // The link element's onload and onerror events are not consistently supported.
-        // On Windows, $.get() fails if the url is a full pathname. To work around this,
-        // prepend "file:///". On the Mac, $.get() works fine if the url is a full pathname,
-        // but *doesn't* work if it is prepended with "file://". Go figure.
-        var getUrl = url;
-        
-        if (brackets.platform === "win" && url.indexOf(":") !== -1) {
-            getUrl = "file:///" + url;
-        }
-        
-        $.get(getUrl).done(function () {
+        var result = new $.Deferred(),
+            url = getFileUrl(module, path);
+        $.get(url).done(function (data, textStatus, jqXHR) {
             var $link = $("<link/>");
-            
+
             $link.attr({
                 type:       "text/css",
                 rel:        "stylesheet",
                 href:       url
             });
-            
+
             $("head").append($link[0]);
-            
+
             result.resolve($link[0]);
         }).fail(function (err) {
             result.reject(err);
         });
-        
+
         return result;
     }
-    
+
+    /**
+     * Loads a less style sheet relative to the extension module.
+     *
+     * @param {!module} module Module provided by RequireJS
+     * @param {!string} path Relative path from the extension folder to a CSS file
+     * @return {!$.Promise} A promise object that is resolved if the CSS file can be loaded.
+     */
+    function loadLessFile(module, path) {
+        var result = new $.Deferred();
+        $.get(getFileUrl(module, path)).done(function (data) {
+            var parser = new less.Parser();
+            parser.parse(data, function onParse(err, tree) {
+                console.assert(!err, err);
+                result.resolve($("<style>" + tree.toCSS() + "</style>")
+                    .appendTo(window.document.head));
+            });
+        }).fail(function (err) {
+            result.reject(err);
+        });
+
+        return result;
+    }
+
     exports.loadStyleSheet = loadStyleSheet;
+    exports.loadLessFile = loadLessFile;
+    exports.getFileUrl = getFileUrl;
 });
