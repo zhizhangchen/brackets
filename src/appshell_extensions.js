@@ -31,39 +31,16 @@
 /*global define, native */
 
 var appshell;
-var gui = require('nw.gui');
-var child_process = require('child_process');
 if (!appshell) {
     appshell = {};
 }
 if (!appshell.fs) {
-    appshell.fs = require('fs');
-    appshell.fs.showOpenDialog = function (
-                allowMultipleSelection,
-                chooseDirectories,
-                title,
-                initialPath,
-                fileTypes, callback) {
-        var file = $("<input type='file'/>");
-        if (chooseDirectories)
-            file.attr("nwdirectory", true);
-        if (allowMultipleSelection)
-            file.attr("multiple", true);
-        file.click().change(function(evt) {
-            var files = [];
-            for (var i = 0; i < this.files.length; ++i)
-              files.push(this.files[i].path.replace(/\\/g, "/"));
-           
-            callback(0, files);
-        });
-    } 
-    
+    appshell.fs = {};
 }
 if (!appshell.app) {
     appshell.app = {};
 }
 (function () {    
-    var liveBrowser, fs;
     // Error values. These MUST be in sync with the error values
     // at the top of appshell_extensions_platform.h.
     
@@ -143,23 +120,185 @@ if (!appshell.app) {
      *
      * @return None. This is an asynchronous call that sends all return information to the callback.
      */
+    appshell.fs.showOpenDialog = function (allowMultipleSelection, chooseDirectory, title, initialPath, fileTypes, callback) {
+        setTimeout(function () {
+            ShowOpenDialog(callback, allowMultipleSelection, chooseDirectory,
+                             title || 'Open', initialPath || '',
+                             fileTypes ? fileTypes.join(' ') : '');
+        }, 10);
+    };
+    
+    /**
+     * Reads the contents of a directory. 
+     *
+     * @param {string} path The path of the directory to read.
+     * @param {function(err, files)} callback Asynchronous callback function. The callback gets two arguments 
+     *        (err, files) where files is an array of the names of the files
+     *        in the directory excluding '.' and '..'.
+     *        Possible error values:
+     *          NO_ERROR
+     *          ERR_UNKNOWN
+     *          ERR_INVALID_PARAMS
+     *          ERR_NOT_FOUND
+     *          ERR_CANT_READ
+     *                 
+     * @return None. This is an asynchronous call that sends all return information to the callback.
+     */
+    appshell.fs.readdir = function (path, callback) {
+        var resultString = ReadDir(callback, path);
+    };
+     
+    /**
+     * Create a new directory.
+     *
+     * @param {string} path The path of the directory to create.
+     * @param {number} mode The permissions for the directory, in numeric format (ie 0777)
+     * @param {function(err)} callback Asynchronous callback function. The callback gets one argument.
+     *
+     * @return None. This is an asynchronous call that sends all return information to the callback.
+     **/
+    appshell.fs.makedir = function (path, mode, callback) {
+        MakeDir(callback, path, mode);
+    };
+
+    /**
+     * Rename a file or directory.
+     *
+     * @param {string} oldPath The old name of the file or directory.
+     * @param {string} newPath The new name of the file or directory.
+     * @param {function(err)} callback Asynchronous callback function. The callback gets one argument.
+     *
+     * @return None. This is an asynchronous call that sends all return information to the callback.
+     **/
+    appshell.fs.rename = function(oldPath, newPath, callback) {
+        Rename(callback, oldPath, newPath);
+    };
+ 
+    /**
+     * Get information for the selected file or directory.
+     *
+     * @param {string} path The path of the file or directory to read.
+     * @param {function(err, stats)} callback Asynchronous callback function. The callback gets two arguments 
+     *        (err, stats) where stats is an object with isFile() and isDirectory() functions.
+     *        Possible error values:
+     *          NO_ERROR
+     *          ERR_UNKNOWN
+     *          ERR_INVALID_PARAMS
+     *          ERR_NOT_FOUND
+     *                 
+     * @return None. This is an asynchronous call that sends all return information to the callback.
+     */
+    appshell.fs.stat = function (path, callback) {
+        GetFileModificationTime(function (err, modtime, isDir) {
+            callback(err, {
+                isFile: function () {
+                    return !isDir;
+                },
+                isDirectory: function () {
+                    return isDir;
+                },
+                mtime: new Date(modtime * 1000) // modtime is seconds since 1970, convert to ms
+            });
+        }, path);
+    };
+ 
+    /**
+     * Quits native shell application
+     */
     appshell.app.quit = function () {
-        gui.App.Quit();
+        QuitApplication();
     };
  
     /**
      * Abort a quit operation
      */
     appshell.app.abortQuit = function () {
-        process.abort();
+        AbortQuit();
     };
 
     /**
      * Invokes developer tools application
      */
-    function ShowDeveloperTools(){alert("ShowDeveloperTools")};
     appshell.app.showDeveloperTools = function () {
-        gui.Window.get().showDevTools();
+        ShowDeveloperTools();
+    };
+
+    /**
+     * Reads the entire contents of a file. 
+     *
+     * @param {string} path The path of the file to read.
+     * @param {string} encoding The encoding for the file. The only supported encoding is 'utf8'.
+     * @param {function(err, data)} callback Asynchronous callback function. The callback gets two arguments 
+     *        (err, data) where data is the contents of the file.
+     *        Possible error values:
+     *          NO_ERROR
+     *          ERR_UNKNOWN
+     *          ERR_INVALID_PARAMS
+     *          ERR_NOT_FOUND
+     *          ERR_CANT_READ
+     *          ERR_UNSUPPORTED_ENCODING
+     *                 
+     * @return None. This is an asynchronous call that sends all return information to the callback.
+     */
+    appshell.fs.readFile = function (path, encoding, callback) {
+        ReadFile(callback, path, encoding);
+    };
+    
+    /**
+     * Write data to a file, replacing the file if it already exists. 
+     *
+     * @param {string} path The path of the file to write.
+     * @param {string} data The data to write to the file.
+     * @param {string} encoding The encoding for the file. The only supported encoding is 'utf8'.
+     * @param {function(err)} callback Asynchronous callback function. The callback gets one argument (err).
+     *        Possible error values:
+     *          NO_ERROR
+     *          ERR_UNKNOWN
+     *          ERR_INVALID_PARAMS
+     *          ERR_UNSUPPORTED_ENCODING
+     *          ERR_CANT_WRITE
+     *          ERR_OUT_OF_SPACE
+     *                 
+     * @return None. This is an asynchronous call that sends all return information to the callback.
+     */
+    appshell.fs.writeFile = function (path, data, encoding, callback) {
+        WriteFile(callback, path, data, encoding);
+    };
+    
+    /**
+     * Set permissions for a file or directory.
+     *
+     * @param {string} path The path of the file or directory
+     * @param {number} mode The permissions for the file or directory, in numeric format (ie 0777)
+     * @param {function(err)} callback Asynchronous callback function. The callback gets one argument (err).
+     *        Possible error values:
+     *          NO_ERROR
+     *          ERR_UNKNOWN
+     *          ERR_INVALID_PARAMS
+     *          ERR_CANT_WRITE
+     *
+     * @return None. This is an asynchronous call that sends all return information to the callback.
+     */
+    appshell.fs.chmod = function (path, mode, callback) {
+        SetPosixPermissions(callback, path, mode);
+    };
+    
+    /**
+     * Delete a file.
+     *
+     * @param {string} path The path of the file to delete
+     * @param {function(err)} callback Asynchronous callback function. The callback gets one argument (err).
+     *        Possible error values:
+     *          NO_ERROR
+     *          ERR_UNKNOWN
+     *          ERR_INVALID_PARAMS
+     *          ERR_NOT_FOUND
+     *          ERR_NOT_FILE
+     *
+     * @return None. This is an asynchronous call that sends all return information to the callback.
+     */
+    appshell.fs.unlink = function (path, callback) {
+        DeleteFileOrDirectory(callback, path);
     };
 
     /**
@@ -167,7 +306,7 @@ if (!appshell.app) {
      * was launched. 
      */
     appshell.app.getElapsedMilliseconds = function () {
-        return process.uptime() * 1000;
+        return GetElapsedMilliseconds();
     }
     
     /**
@@ -187,31 +326,7 @@ if (!appshell.app) {
     appshell.app.openLiveBrowser = function (url, enableRemoteDebugging, callback) {
         // enableRemoteDebugging flag is ignored on mac
         setTimeout(function() {
-            var args = [];
-            var newHeight = screen.availHeight/2;
-            var nwWindow = gui.Window.get();
-            if (enableRemoteDebugging) {
-                args.push('--remote-debugging-port=9222');
-                args.push('--no-toolbar');
-            }
-            args.push("--url="+url);
-            liveBrowser = child_process.spawn(process.execPath, args);
-            liveBrowser.on('close', function () {
-                liveBrowser = null;
-            });
-            nwWindow.on('close', function() {
-                appshell.app.closeLiveBrowser();
-                nwWindow.close(true);
-            });
-            //Ubuntu 11.10 Unity env
-            if ((process.env["XDG_CURRENT_DESKTOP"] && process.env["XDG_CURRENT_DESKTOP"] === "Unity")
-                //Ubuntu 11.04 Unity env
-                || process.env["DESKTOP_SESSION"] === "gnome")
-                newHeight -= (window.outerHeight - window.innerHeight);
-            window.resizeTo(window.outerWidth, newHeight);
-            nwWindow.moveTo((screen.availWidth - window.outerWidth)/2,
-                 screen.availTop + screen.availHeight/2);
-            callback(liveBrowser.pid > 0 ? 0: -1, liveBrowser.pid)
+            OpenLiveBrowser(callback, url, enableRemoteDebugging);
         }, 0);
     };
     
@@ -229,15 +344,7 @@ if (!appshell.app) {
      * @return None. This is an asynchronous call that sends all return information to the callback.
      */
     appshell.app.closeLiveBrowser = function (callback) {
-        if (callback && liveBrowser) {
-            liveBrowser.on('close', function () {
-                callback(0);
-            });
-        }
-        else if (callback)
-            callback(-1);
-        if (liveBrowser)
-            process.kill(liveBrowser.pid, "SIGTERM");
+        CloseLiveBrowser(callback);
     };
  
     /**
@@ -248,7 +355,6 @@ if (!appshell.app) {
      *
      * @return None. This is an asynchronous call that sends all return information to the callback.
      */
-    function OpenURLInDefaultBrowser(){alert("OpenURLInDefaultBrowser")};
     appshell.app.openURLInDefaultBrowser = function (callback, url) {
         OpenURLInDefaultBrowser(callback, url);
     };
@@ -256,7 +362,6 @@ if (!appshell.app) {
     /**
      * Return the user's language per operating system preferences.
      */
-    function GetCurrentLanguage(){ return navigator.language};
     Object.defineProperty(appshell.app, "language", {
         writeable: false,
         get : function() { return GetCurrentLanguage(); },
@@ -272,56 +377,32 @@ if (!appshell.app) {
      * @return {string} Full path of the application support directory
      */
     appshell.app.getApplicationSupportDirectory = function () {
-        var groupName = "Adobe",
-            appName = "Brackets";
-        if (process.platform === "win32")
-            return process.env["APPDATA"]+ "\\" + groupName + "\\" + appName;
-        else
-            return process.env["HOME"]+"/Library/Application Support/"+ groupName
-                       + "/" + appName;
+        return GetApplicationSupportDirectory();
     }
-
+  
+    /**
+     * Open the specified folder in an OS file window.
+     *
+     * @param {string} path Path of the folder to show.
+     * @param {function(err)} callback Asyncrhonous callback function with one argument (the error)
+     *
+     * @return None. This is an asynchronous call that sends all return information to the callback.
+     */
+    appshell.app.showOSFolder = function (path, callback) {
+        ShowOSFolder(callback, path);
+    }
+ 
     /**
      * Open the extensions folder in an OS file window.
      *
-     * @param {string} appURL URL of the index.html file for the application
+     * @param {string} appURL Not used
      * @param {function(err)} callback Asynchronous callback function with one argument (the error)
      *
      * @return None. This is an asynchronous call that sends all return information to the callback.
      */
-    function ShowExtensionsFolder(){alert("ShowExtensionsFolder")};
     appshell.app.showExtensionsFolder = function (appURL, callback) {
-        ShowExtensionsFolder(callback, appURL);
+        appshell.app.showOSFolder(GetApplicationSupportDirectory() + "/extensions", callback);
     };
-    fs = appshell.fs,
-        requestFile = process.cwd() + '/request',
-        responseFile = process.cwd() + '/response';
-
-    if (!fs.existsSync(requestFile))
-        fs.closeSync(fs.openSync(requestFile, "w"));
-    fs.watch(requestFile, function (event, filename) {
-        var Inspector = require("LiveDevelopment/Inspector/Inspector");
-        console.log('event is: ' + event);
-        if (filename) {
-            console.log('filename provided: ' + filename);
-        } else {
-            console.log('filename not provided');
-        }
-        var request = fs.readFileSync(requestFile, "ascii");
-        console.log("request:", request);
-        if ( request === "disconnect") {
-            console.log("try to disconnect inspector");
-            if (Inspector.connected()) {
-                Inspector.on("disconnect", function () {
-                    fs.writeFileSync(responseFile, "disconnected", "ascii");
-                });
-                Inspector.disconnect();
-            }
-            else
-                fs.writeFileSync(responseFile, "disconnected", "ascii");
-            fs.writeFileSync(requestFile, "", "ascii");
-       }
-    })
  
     // Alias the appshell object to brackets. This is temporary and should be removed.
     brackets = appshell;
