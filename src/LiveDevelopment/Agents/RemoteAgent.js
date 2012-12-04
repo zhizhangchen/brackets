@@ -50,11 +50,12 @@ define(function RemoteAgent(require, exports, module) {
         request.open("GET", "LiveDevelopment/Agents/RemoteFunctions.js");
         request.onload = function onLoad() {
             var run = "window._LD=" + request.response + "(" + LiveDevelopment.config.experimental + ")";
-            Inspector.Runtime.evaluate(run, function onEvaluate(res) {
+            /*Inspector.Runtime.evaluate(run, function onEvaluate(res) {
                 console.assert(!res.wasThrown, res.result.description);
                 _objectId = res.result.objectId;
                 _load.resolve();
-            });
+            });*/
+                _load.resolve();
         };
         request.send(null);
     }
@@ -74,6 +75,8 @@ define(function RemoteAgent(require, exports, module) {
      * @param {string} function name
      */
     function call(method, varargs) {
+        if (!_objectId)
+            return;
         console.assert(_objectId, "Attempted to call remote method without objectId set.");
         var args = Array.prototype.slice.call(arguments, 1);
 
