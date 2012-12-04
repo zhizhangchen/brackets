@@ -1,7 +1,12 @@
 var gui = require('nw.gui');
 var child_process = require('child_process');
 var liveBrowser;
+var ports = {};
 $.extend(true, brackets.fs, require('fs'));
+var execDeviceCommand = function (cmd, callback) {
+    console.log("cmd:" +  cmd);
+    child_process.exec("sdb -s " + window.device + " " + cmd, callback);
+};
 function ShowOpenDialog ( callback, allowMultipleSelection, chooseDirectories,
                 title, initialPath, fileTypes) {
     var file = $("<input type='file'/>");
@@ -87,25 +92,23 @@ function GetElapsedMilliseconds(){
 function OpenLiveBrowser(callback, url, enableRemoteDebugging){
     // enableRemoteDebugging flag is ignored on mac
     if (window.device && window.device !== "Simulator") {
-        var execDeviceCommand = function (cmd, callback) {
-            console.log("cmd:" +  cmd);
-            child_process.exec("sdb -s " + window.device + " " + cmd, callback);
-        };
-        var projectRoot = require("project/ProjectManager").getProjectRoot();
+        var ProjectManager = require("project/ProjectManager");
+        var projectRoot = ProjectManager.getProjectRoot();
         var projectName = projectRoot.name;
-        var projectId = "FNRVOrlW6p";
+        var projectId = ProjectManager.getProjectId();
         process.chdir(projectRoot.fullPath);
-        //if (brackets.fs.existsSync(projectName + ".wgt"))
-         //   brackets.fs.unlinkSync(projectName + ".wgt");
-        child_process.exec("ls", function (err, stdout, stderr) {
+        console.log("dir changed to " + projectRoot.fullPath);
+        if (brackets.fs.existsSync(projectName + ".wgt"))
+            brackets.fs.unlinkSync(projectName + ".wgt");
+        child_process.exec("web-packaging", function (err, stdout, stderr) {
             console.log(stdout);
             console.log(stderr);
-            execDeviceCommand("shell mdkir -p /opt/apps/widgets/test-widgets"); 
-            execDeviceCommand("push " + projectName + ".wgt /opt/apps/widgets/test-widgets", function(err, stdout, stderr) {
+            execDeviceCommand("shell mdkir -p /opt/apps/widgets/test-widgets", function () {
+            execDeviceCommand("push " + projectName + ".wgt /tmp/"+ projectName + ".wgt", function(err, stdout, stderr) {
                 console.log(stdout);
                 console.log(stderr);
                 //execDeviceCommand("shell '/usr/bin/wrt-launcher --developer-mode 1 && wrt-installer -iu /opt/apps/widgets/test-widgets/" + projectName + ".wgt && /usr/bin/wrt-launcher --start " + projectId + " --debug --timeout=90'", function (err, stdout, stderr) {
-                execDeviceCommand("shell '/usr/bin/wrt-launcher --developer-mode 1 && pkgcmd -s -n " + projectId + " -t wgt && pkgcmd -u -n " + projectId +  " -q -t wgt; pkgcmd -i -q -t wgt -p /opt/apps/widgets/test-widgets/" + projectName + ".wgt && /usr/bin/wrt-launcher --start " + projectId + " --debug --timeout=90'", function (err, stdout, stderr) {
+                execDeviceCommand("shell 'unzip -p /tmp/" + projectName + ".wgt > t && unzip -p /opt/usr/apps/widgets/test-widgets/" + projectName + ".wgt> t1 && if [ " + ports[window.device + "." + projectId] + " == undefined ] || ! diff t t1 >/dev/null  ; then cp /tmp/" + projectName + ".wgt" + " /opt/usr/apps/widgets/test-widgets && /usr/bin/wrt-launcher --developer-mode 1 && pkgcmd -s -n " + projectId + " -t wgt && pkgcmd -u -n " + projectId +  " -q -t wgt; pkgcmd -i -q -t wgt -p /opt/apps/widgets/test-widgets/" + projectName + ".wgt && /usr/bin/wrt-launcher --start " + projectId + " --debug --timeout=90 ; else echo port: " + ports[window.device + "." + projectId] + "; fi'", function (err, stdout, stderr) {
                     console.log("got stdout:" + stdout.split("\n").length);
                     stdout.split("\n").forEach (function (line) {
                         console.log("line:" + line);
@@ -113,6 +116,7 @@ function OpenLiveBrowser(callback, url, enableRemoteDebugging){
                             var port = line.split(" ")[1];
                             var Inspector = require("LiveDevelopment/Inspector/Inspector");
                             console.log("got port:" + port);
+                            ports[ window.device + "." + projectId ] = port;
                             Inspector.setSocketsGetter(function () {
                                 var result = new $.Deferred();
                                 console.log("setting up forward " + port);
@@ -120,7 +124,11 @@ function OpenLiveBrowser(callback, url, enableRemoteDebugging){
                                     console.log("getting debug url:" + port);
                                     $.getJSON("http://localhost:" + port + "/WidgetDebug", function (data) {
                                         console.log("got debug url:" + data.inspector_url);
-                                        result.resolve ([{webSocketDebuggerUrl:"ws://localhost:" + port +"/devtools/page/1", url:url}]);
+                                        result.resolve ([{
+                                            webSocketDebuggerUrl:"ws://localhost:" + port +"/devtools/page/1",
+                                            url:url,
+                                            devtoolsFrontendUrl: "/" + data.inspector_url
+                                        }]);
                                     });
                                 });
                                 return result;
@@ -130,6 +138,7 @@ function OpenLiveBrowser(callback, url, enableRemoteDebugging){
                     })
 
                 });
+            });
             });
         })
         return;

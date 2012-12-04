@@ -175,7 +175,7 @@ define(function DOMAgent(require, exports, module) {
 
     /** Load the source document and match it with the DOM tree*/
     function _onFinishedLoadingDOM() {
-        var request = new XMLHttpRequest();
+        /*var request = new XMLHttpRequest();
         request.open("GET", exports.url);
         request.onload = function onLoad() {
             if ((request.status >= 200 && request.status < 300) ||
@@ -191,7 +191,11 @@ define(function DOMAgent(require, exports, module) {
             var msg = "Could not load source file at " + exports.url;
             _load.reject(msg, { message: msg });
         };
-        request.send(null);
+        request.send(null);*/
+        Inspector.Page.getResourceContent(exports.frameId, exports.url, function (res) {
+            _mapDocumentToSource(res.content);
+            _load.resolve();
+        });
     }
 
     // WebInspector Event: Page.loadEventFired
@@ -210,6 +214,7 @@ define(function DOMAgent(require, exports, module) {
     function _onFrameNavigated(event, res) {
         // res = {frame}
         exports.url = _cleanURL(res.frame.url);
+        exports.frameId = res.frame.id;
     }
 
      // WebInspector Event: DOM.documentUpdated
