@@ -122,6 +122,9 @@ define(function LiveDevelopment(require, exports, module) {
     function setUrlWrapper(wrapper) {
         _urlWrapper = wrapper;
     }
+    function getUrlWrapper(wrapper) {
+        return _urlWrapper;
+    }
     function setCloseScript(script) {
         _closeScript = script;
     }
@@ -460,7 +463,8 @@ define(function LiveDevelopment(require, exports, module) {
         // Load the right document (some agents are waiting for the page's load event)
         var doc = _getCurrentDocument();
         if (doc) {
-            Inspector.Page.navigate(doc.root.url);
+            //Inspector.Page.navigate(doc.root.url);
+            Inspector.Page.reload();
         } else {
             Inspector.Page.reload();
         }
@@ -494,6 +498,7 @@ define(function LiveDevelopment(require, exports, module) {
 
         url = url[url.length - 1].split('-app=');
         url = url[url.length - 1];
+        doc.root.url = url;
         function showWrongDocError() {
             Dialogs.showModalDialog(
                 Dialogs.DIALOG_ID_ERROR,
@@ -575,7 +580,7 @@ define(function LiveDevelopment(require, exports, module) {
                 retryCount++;
 
                 if (!browserStarted && exports.status !== STATUS_ERROR) {
-                    url = launcherUrl + "?" + encodeURIComponent(url);
+                    //url = launcherUrl + "?" + encodeURIComponent(url);
 
                     // If err === FileError.ERR_NOT_FOUND, it means a remote debugger connection
                     // is available, but the requested URL is not loaded in the browser. In that
@@ -589,6 +594,11 @@ define(function LiveDevelopment(require, exports, module) {
                     )
                         .done(function () {
                             browserStarted = true;
+                if (exports.status !== STATUS_ERROR) {
+                    window.setTimeout(function retryConnect() {
+                        Inspector.connectToURL(url, useDevTool).then(result.resolve, onConnectFail);
+                    }, 100);
+                }
                         })
                         .fail(function (err) {
                             var message;
@@ -614,8 +624,7 @@ define(function LiveDevelopment(require, exports, module) {
                             result.reject("OPEN_LIVE_BROWSER");
                         });
                 }
-                    
-                if (exports.status !== STATUS_ERROR) {
+                else if (exports.status !== STATUS_ERROR) {
                     window.setTimeout(function retryConnect() {
                         Inspector.connectToURL(url, useDevTool).then(result.resolve, onConnectFail);
                     }, 100);
@@ -652,7 +661,7 @@ define(function LiveDevelopment(require, exports, module) {
     /** Redraw highlights **/
     function redrawHighlight() {
         if (Inspector.connected() && agents.highlight) {
-            agents.highlight.redraw();
+            //agents.highlight.redraw();
         }
     }
 
@@ -666,7 +675,7 @@ define(function LiveDevelopment(require, exports, module) {
 
         if (Inspector.connected()) {
             hideHighlight();
-            if (agents.network && agents.network.wasURLRequested(doc.url)) {
+            if (agents.network && agents.network.wasURLRequested(_pathToUrl(doc.file.fullPath))) {
                 _closeDocument();
                 var editor = EditorManager.getCurrentFullEditor();
                 _openDocument(doc, editor);
@@ -731,6 +740,7 @@ define(function LiveDevelopment(require, exports, module) {
     exports.hideHighlight       = hideHighlight;
     exports.redrawHighlight     = redrawHighlight;
     exports.setUrlWrapper       = setUrlWrapper;
+    exports.getUrlWrapper       = getUrlWrapper;
     exports.setCloseScript       = setCloseScript;
     exports.init                = init;
 });

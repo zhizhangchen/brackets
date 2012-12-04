@@ -1,18 +1,18 @@
 [submodule "src/thirdparty/CodeMirror2"]
 	path = src/thirdparty/CodeMirror2
-	url = https://github.com/adobe/CodeMirror2.git
+	url = git://github.com/adobe/CodeMirror2.git
 [submodule "src/thirdparty/path-utils"]
 	path = src/thirdparty/path-utils
-	url = https://github.com/jblas/path-utils.git
+	url = git://github.com/jblas/path-utils.git
 [submodule "src/thirdparty/jslint"]
 	path = src/thirdparty/jslint
-	url = https://github.com/douglascrockford/JSLint.git
+	url = git://github.com/douglascrockford/JSLint.git
 [submodule "src/thirdparty/smart-auto-complete"]
 	path = src/thirdparty/smart-auto-complete
-	url = https://github.com/laktek/jQuery-Smart-Auto-Complete.git
+	url = git://github.com/laktek/jQuery-Smart-Auto-Complete.git
 [submodule "src/thirdparty/mustache"]
 	path = src/thirdparty/mustache
-	url = https://github.com/janl/mustache.js.git
+	url = git://github.com/janl/mustache.js.git
 [submodule "src/extensions/default/everyscrub"]
 	path = src/extensions/default/everyscrub
 	url = git://github.com/peterflynn/everyscrub.git

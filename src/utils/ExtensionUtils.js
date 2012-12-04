@@ -31,8 +31,9 @@
 define(function (require, exports, module) {
     "use strict";
     
+    var FileUtils = require("file/FileUtils");
     function getFileUrl(module, path) {
-        var modulePath = module.uri.substr(0, module.uri.lastIndexOf("/") + 1),
+        var modulePath = FileUtils.getNativeModuleDirectoryPath(module) + "/",
             url = modulePath + path;
 
             var getUrl = url;
@@ -40,7 +41,7 @@ define(function (require, exports, module) {
             if (brackets.platform === "win" && url.indexOf(":") !== -1) {
                 getUrl = "file:///" + url;
             }
-            else
+            else 
                 getUrl = "file://" + url;
             return getUrl;
 

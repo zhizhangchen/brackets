@@ -239,6 +239,8 @@ define(function (require, exports, module) {
         
         if (module && module.uri) {
             path = decodeURI(module.uri);
+            if (path[0] === ".")
+                path = getNativeBracketsDirectoryPath() + "/" + path.substr(1);
             
             // Remove module name and trailing slash from path.
             path = path.substr(0, path.lastIndexOf("/"));

@@ -219,10 +219,14 @@ define(function DOMAgent(require, exports, module) {
     // WebInspector Event: DOM.setChildNodes
     function _onSetChildNodes(event, res) {
         // res = {parentId, nodes}
+        try {
         var node = nodeWithId(res.parentId);
         node.setChildrenPayload(res.nodes);
         if (_pendingRequests > 0 && --_pendingRequests === 0) {
             _onFinishedLoadingDOM();
+        }
+        }catch (e) {
+            console.error("setChildNodes error", e);
         }
     }
 
