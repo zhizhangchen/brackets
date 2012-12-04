@@ -400,8 +400,8 @@ define(function LiveDevelopment(require, exports, module) {
         var message;
         
         // Sometimes error.message is undefined
-        if (!error.message) {
-            console.warn("Expected a non-empty string in error.message, got this instead:", error.message);
+        if (!error || !error.message) {
+            console.warn("Expected a non-empty string in error.message, got this instead:", error?error.message:null);
             message = JSON.stringify(error);
         } else {
             message = error.message;
@@ -413,7 +413,7 @@ define(function LiveDevelopment(require, exports, module) {
         }
 
         // Additional information, like exactly which parameter could not be processed.
-        var data = error.data;
+        var data = error?error.data:null;
         if (Array.isArray(data)) {
             message += "\n" + data.join("\n");
         }
@@ -675,7 +675,8 @@ define(function LiveDevelopment(require, exports, module) {
 
         if (Inspector.connected()) {
             hideHighlight();
-            if (agents.network && agents.network.wasURLRequested(_pathToUrl(doc.file.fullPath))) {
+            //if (agents.network && agents.network.wasURLRequested(_pathToUrl(doc.file.fullPath))) {
+            if (agents.network && agents.network.wasURLRequested(doc.url)) {
                 _closeDocument();
                 var editor = EditorManager.getCurrentFullEditor();
                 _openDocument(doc, editor);
@@ -697,6 +698,7 @@ define(function LiveDevelopment(require, exports, module) {
     function _onDocumentSaved(event, doc) {
         if (doc && Inspector.connected() && _classForDocument(doc) !== CSSDocument &&
                 agents.network && agents.network.wasURLRequested(doc.url)) {
+            $(exports).triggerHandler("liveHTMLSaved", doc);
             // Reload HTML page
             Inspector.Page.reload();
 
