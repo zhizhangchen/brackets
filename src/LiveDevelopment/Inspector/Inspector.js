@@ -92,6 +92,8 @@ define(function Inspector(require, exports, module) {
     var _connectDeferred; // The deferred connect
     var _devToolIframe;
     var _editingElements;
+    var _socketsGetter;
+
 
     /** Check a parameter value against the given signature
      * This only checks for optional parameters, not types
@@ -132,7 +134,8 @@ define(function Inspector(require, exports, module) {
             id = _messageId++;
             _messageCallbacks[id] = args.pop();
         } else {
-            id = 0;
+            //id = 0;
+            id = _messageId++;
         }
 
         // verify the parameters against the method signature
@@ -204,10 +207,15 @@ define(function Inspector(require, exports, module) {
         if (show) {
             _editingElements = $('.content > :not(#main-toolbar), #sidebar, #sidebar-resizer, #status-bar, .nav, .title-wrapper').filter(':visible');
         }
-        _editingElements.toggle(!show);
-        $('#dev-tools').toggle(show);
+        if (_editingElements) {
+            _editingElements.toggle(!show);
+            $('#dev-tools').toggle(show);
+        }
     }
 
+    function setSocketsGetter (getter) {
+        _socketsGetter = getter;
+    }
     /** Public Functions *****************************************************/
 
     /** Get the available debugger sockets from the remote debugger
@@ -215,6 +223,8 @@ define(function Inspector(require, exports, module) {
      * @param {integer} debugger port
      */
     function getAvailableSockets(host, port) {
+        if (_socketsGetter) 
+            return _socketsGetter();
         if (!host) {
             host = "127.0.0.1";
         }
@@ -272,28 +282,35 @@ define(function Inspector(require, exports, module) {
     /** Connect to the remote debugger WebSocket at the given URL
      * @param {string} WebSocket URL
      */
-    function connect(socketURL, useDevTool) {
+    function connect(socketURL, useDevTool, devtoolsFrontendUrl) {
         disconnect();
         if (useDevTool) {
             var toolbar = $('#main-toolbar'),
                 toolbarHeight = toolbar.outerHeight();
             _devToolIframe = $('<iframe frameborder="0" style="overflow:hidden;width:100%;height:100%" height="100%" width="100%"></iframe>')
-                .attr("src", "http://localhost:9222/devtools/devtools.html?" + socketURL.replace("ws://", "ws="))
+                //.attr("src", "http://localhost:9222/devtools/devtools.html?" + socketURL.replace("ws://", "ws="))
+                .attr("src", socketURL.replace("ws://", "http://").replace(/\/devtools\/.*/, devtoolsFrontendUrl))
                 .load(function() {
-                    var inspector = $(this).contents()[0].defaultView.WebInspector;
-                    function wrapEvent(socket, event, extraHandler) {
-                        var oldEvent = socket[event];
-                        socket[event] = function () {
-                            extraHandler.apply(null, arguments);
-                            if (oldEvent)
-                                oldEvent.apply(null, arguments);
-                        }
-                    };
-                    var _socket = $(this).contents()[0].defaultView.WebInspector.socket;
-                    wrapEvent(_socket, "onmessage",_onMessage);
-                    wrapEvent(_socket, "onopen", _onConnect);
-                    wrapEvent(_socket, "onclose", _onDisconnect);
-                    wrapEvent(_socket, "onerror", _onError);
+                    var inspectorWindow = $(this).contents()[0].defaultView,
+                        loadCompleted = inspectorWindow.InspectorFrontendAPI.loadCompleted;
+                    inspectorWindow.InspectorFrontendAPI.loadCompleted = function () {
+                        function wrapEvent(socket, event, extraHandler) {
+                            var oldEvent = socket[event];
+                            socket[event] = function () {
+                                extraHandler.apply(null, arguments);
+                                if (oldEvent)
+                                    oldEvent.apply(null, arguments);
+                            }
+                        };
+                        var _socket = inspectorWindow.WebInspector.socket;
+                        wrapEvent(_socket, "onmessage",_onMessage);
+                        wrapEvent(_socket, "onopen", _onConnect);
+                        wrapEvent(_socket, "onclose", _onDisconnect);
+                        wrapEvent(_socket, "onerror", _onError);
+                        _onConnect();
+
+                        loadCompleted();
+                    }
 
                     /*$(this).contents().find('#toolbar').append(
                       $('<button class="toolbar-item toggleable console"><div class="toolbar-icon"></div><div class="toolbar-label">Editor</div></button>')
@@ -304,9 +321,11 @@ define(function Inspector(require, exports, module) {
                       $('iframe').hide();
                       })
                       )*/
-                    _toggleDevTools(true);
-                    _setDevToolHeight();
-                    _onConnect();
+                    if (useDevTool) {
+                        _toggleDevTools(true);
+                        _setDevToolHeight();
+                    }
+                    //_onConnect();
                 })
                 .appendTo($('#dev-tools'));
                 $('.content').css('marginLeft', 0);
@@ -339,7 +358,7 @@ define(function Inspector(require, exports, module) {
             for (i in response) {
                 page = response[i];
                 if (page.webSocketDebuggerUrl && page.url.indexOf(url) === 0) {
-                    connect(page.webSocketDebuggerUrl, useDevTool);
+                    connect(page.webSocketDebuggerUrl, useDevTool, page.devtoolsFrontendUrl);
                     deferred.resolve();
                     return;
                 }
@@ -356,15 +375,9 @@ define(function Inspector(require, exports, module) {
     function connected() {
         return _socket !== undefined || (_devToolIframe && _devToolIframe.parent()[0])
     }
-
-    /** Initialize the Inspector
-     * Read the Inspector.json configuration and define the command objects
-     * -> Inspector.domain.command()
-     */
-    function init(theConfig) {
-        exports.config = theConfig;
+    function setInspectorJson(fileName) {
         var request = new XMLHttpRequest();
-        request.open("GET", "LiveDevelopment/Inspector/Inspector.json");
+        request.open("GET", "LiveDevelopment/Inspector/" + fileName);
         request.onload = function onLoad() {
             var InspectorJSON = JSON.parse(request.response);
             var i, j, domain, domainDef, command;
@@ -378,7 +391,16 @@ define(function Inspector(require, exports, module) {
             }
         };
         request.send(null);
+    }
+
+    /** Initialize the Inspector
+     * Read the Inspector.json configuration and define the command objects
+     * -> Inspector.domain.command()
+     */
+    function init(theConfig) {
+        exports.config = theConfig;
         $(window).resize(_setDevToolHeight);
+        setInspectorJson("Inspector_new.json");
         setInterval(function () {
             var toolbar = $('#main-toolbar');
             toolbar.offset({top: 0, left: toolbar.offset().left});
@@ -393,6 +415,8 @@ define(function Inspector(require, exports, module) {
     exports.disconnect = disconnect;
     exports.connect = connect;
     exports.connectToURL = connectToURL;
+    exports.setSocketsGetter = setSocketsGetter;
+    exports.setInspectorJson = setInspectorJson;
     exports.connected = connected;
     exports.init = init;
 });

@@ -174,8 +174,14 @@ define(function ScriptAgent(require, exports, module) {
         Inspector.Debugger.enable();
         Inspector.Debugger.setPauseOnExceptions("uncaught");
         $(DOMAgent).on("getDocument.ScriptAgent", _onGetDocument);
-        Inspector.Runtime.enable();
-        $(Inspector.Runtime).on("executionContextCreated.ScriptAgent", _onContextCreated);
+        if (Inspector.Runtime.setReportExecutionContextCreation) {
+            Inspector.Runtime.setReportExecutionContextCreation(true);
+            $(Inspector.Runtime).on("isolatedContextCreated.ScriptAgent", _onContextCreated);
+        }
+        else {
+            Inspector.Runtime.enable();
+            $(Inspector.Runtime).on("executionContextCreated.ScriptAgent", _onContextCreated);
+        }
         $(Inspector.Debugger)
             .on("scriptParsed.ScriptAgent", _onScriptParsed)
             .on("scriptFailedToParse.ScriptAgent", _onScriptFailedToParse)
