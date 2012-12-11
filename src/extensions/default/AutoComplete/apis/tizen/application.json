@@ -1,0 +1,14 @@
+{
+    "launch": {},
+    "kill": {},
+    "exit": {},
+    "hide": {},
+    "launchService": {},
+    "getAppService": {},
+    "getAppsContext": {},
+    "getAppContext": {},
+    "getAppsInfo": {},
+    "getAppInfo": {},
+    "addAppInfoEventListener": {},
+    "removeAppInfoEventListener": {}
+}

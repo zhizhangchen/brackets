@@ -1,0 +1,8 @@
+{
+    "maxPathLength": 256,
+    "resolve": {},
+    "getStorage": {},
+    "listStorages": {},
+    "addStorageStateChangeListener": {},
+    "removeStorageStateChangeListener": {}
+}
