@@ -1,0 +1,12 @@
+{
+    "history": {
+        "find": {},
+        "remove": {},
+        "removeBatch": {},
+        "removeAll": {},
+        "deleteRecording": {},
+        "addListener": {},
+        "removeListener": {}
+    },
+    "isCallInProgress": {}
+}

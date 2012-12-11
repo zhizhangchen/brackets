@@ -57,18 +57,48 @@ define(function (require, exports, module) {
      * Inject platform namespace and its module APIs 
      */
     function _injectPlatformNamespace() {
-        var platformApis, apiJson;
+        var platformApis;
 
         platformApis = {
-            tizen: ['alarm']
+            tizen: ['CompositeFilter', 'AttributeFilter', 'AttributeRangeFilter', 'SortMode', 'SimpleCoordinates',
+                    'alarm', 'AlarmRelative', 'AlarmAbsolute',
+                    'application', 'ApplicationServiceData', 'ApplicationService',
+                    'bluetooth',
+                    'calendar', 'CalendarTask', 'CalendarEvent', 'CalendarAttendee', 'CalendarRecurrenceRule', 'CalendarEventId', 'CalendarAlarm',
+                    'call',
+                    'contact', 'Contact', 'ContactRef', 'ContactName', 'ContactOrganization', 'ContactWebSite', 'ContactAnniversary', 'ContactAccount', 'ContactAddress', 'ContactPhoneNumber', 'ContactEmailAddress',
+                    'filesystem',
+                    'lbs',
+                    'mediacontent',
+                    'messaging', 'Message', 'MessageAttachment',
+                    'nfc', 'NDEFMessage', 'NDEFRecord', 'NDEFRecordText', 'NDEFRecordURI', 'NDEFRecordMedia',
+                    'systeminfo',
+                    'time', 'TZDate', 'TimeDuration',
+                    'power', 'PowerStateRequest',
+                    'download', 'URLDownload',
+                    'notification', 'StatusNotification']
         };
 
         for (var platform in platformApis) {
             window[platform] = {};
+
             platformApis[platform].forEach(function (api) {
-                apiJson = _extensionUrl() + 'apis/' + platform + '/' + api + '.json';
-                $.getJSON(apiJson, function (apiObj) {
-                    window[platform][api] = apiObj;
+                var relPath, fullPath;
+
+                relPath = 'apis/' + platform + '/' + api + '.json';
+                fullPath = FileUtils.getNativeModuleDirectoryPath(module) + '/' + relPath;
+
+                brackets.fs.exists(fullPath, function (exists) {
+                    var apiUrl;
+
+                    if (!exists) {
+                        window[platform][api] = {};
+                        return;
+                    }
+                    apiUrl = _extensionUrl() + relPath;
+                    $.getJSON(apiUrl, function (apiObj) {
+                        window[platform][api] = apiObj;
+                    });
                 });
             });
         }

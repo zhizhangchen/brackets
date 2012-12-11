@@ -1,0 +1,9 @@
+{
+    "getCurrentDateTime": {},
+    "setCurrentDateTime": {},
+    "getLocalTimezone": {},
+    "getAvailableTimezones": {},
+    "getDateFormat": {},
+    "getTimeFormat": {},
+    "isLeapYear": {}
+}
