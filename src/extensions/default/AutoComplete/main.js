@@ -57,50 +57,34 @@ define(function (require, exports, module) {
      * Inject platform namespace and its module APIs 
      */
     function _injectPlatformNamespace() {
-        var platformApis;
+        var platformApis, platform;
 
         platformApis = {
-            tizen: ['CompositeFilter', 'AttributeFilter', 'AttributeRangeFilter', 'SortMode', 'SimpleCoordinates',
-                    'alarm', 'AlarmRelative', 'AlarmAbsolute',
-                    'application', 'ApplicationServiceData', 'ApplicationService',
-                    'bluetooth',
-                    'calendar', 'CalendarTask', 'CalendarEvent', 'CalendarAttendee', 'CalendarRecurrenceRule', 'CalendarEventId', 'CalendarAlarm',
-                    'call',
-                    'contact', 'Contact', 'ContactRef', 'ContactName', 'ContactOrganization', 'ContactWebSite', 'ContactAnniversary', 'ContactAccount', 'ContactAddress', 'ContactPhoneNumber', 'ContactEmailAddress',
-                    'filesystem',
-                    'lbs',
-                    'mediacontent',
-                    'messaging', 'Message', 'MessageAttachment',
-                    'nfc', 'NDEFMessage', 'NDEFRecord', 'NDEFRecordText', 'NDEFRecordURI', 'NDEFRecordMedia',
-                    'systeminfo',
-                    'time', 'TZDate', 'TimeDuration',
-                    'power', 'PowerStateRequest',
-                    'download', 'URLDownload',
-                    'notification', 'StatusNotification']
+            tizen: ['alarm', 'application', 'bluetooth', 'calendar', 'call',
+                'contact', 'filesystem', 'lbs', 'mediacontent', 'messaging',
+                'nfc', 'systeminfo', 'time', 'power', 'download',
+                'notification']
         };
 
-        for (var platform in platformApis) {
-            window[platform] = {};
+        function _inject(module) {
+            var relPath, apiUrl;
 
-            platformApis[platform].forEach(function (api) {
-                var relPath, fullPath;
+            relPath = 'apis/' + platform + '/' + module + '.json';
+            apiUrl = _extensionUrl() + relPath;
 
-                relPath = 'apis/' + platform + '/' + api + '.json';
-                fullPath = FileUtils.getNativeModuleDirectoryPath(module) + '/' + relPath;
-
-                brackets.fs.exists(fullPath, function (exists) {
-                    var apiUrl;
-
-                    if (!exists) {
-                        window[platform][api] = {};
-                        return;
-                    }
-                    apiUrl = _extensionUrl() + relPath;
-                    $.getJSON(apiUrl, function (apiObj) {
-                        window[platform][api] = apiObj;
-                    });
-                });
+            $.getJSON(apiUrl, function (apiObj) {
+                if (platform === module) {
+                    window[platform] = apiObj;
+                    return;
+                } else if (window[platform]) {
+                    window[platform][module] = apiObj;
+                }
             });
+        }
+
+        for (platform in platformApis) {
+            _inject(platform);
+            platformApis[platform].forEach(_inject);
         }
     }
 

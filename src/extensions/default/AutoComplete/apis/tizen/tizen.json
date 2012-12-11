@@ -1,0 +1,49 @@
+{
+    "CompositeFilter": {},
+    "AttributeFilter": {},
+    "AttributeRangeFilter": {},
+    "SortMode": {},
+    "SimpleCoordinates": {},
+
+    "AlarmRelative": {},
+    "AlarmAbsolute": {},
+
+    "ApplicationServiceData": {},
+    "ApplicationService": {},
+
+    "CalendarTask": {},
+    "CalendarEvent": {},
+    "CalendarAttendee": {},
+    "CalendarRecurrenceRule": {},
+    "CalendarEventId": {},
+    "CalendarAlarm": {},
+
+    "Contact": {},
+    "ContactRef": {},
+    "ContactName": {},
+    "ContactOrganization": {},
+    "ContactWebSite": {},
+    "ContactAnniversary": {},
+    "ContactAccount": {},
+    "ContactAddress": {},
+    "ContactPhoneNumber": {},
+    "ContactEmailAddress": {},
+
+    "Message": {},
+    "MessageAttachment": {},
+
+    "NDEFMessage": {},
+    "NDEFRecord": {},
+    "NDEFRecordText": {},
+    "NDEFRecordURI": {},
+    "NDEFRecordMedia": {},
+
+    "TZDate": {},
+    "TimeDuration": {},
+
+    "PowerStateRequest": {},
+
+    "URLDownload": {},
+
+    "StatusNotification": {}
+}
