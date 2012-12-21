@@ -2,7 +2,31 @@ var gui = require('nw.gui');
 var child_process = require('child_process');
 var liveBrowser;
 var ports = {};
-$.extend(true, brackets.fs, require('fs'));
+var nodeFs = require('fs');
+$.extend(true, brackets.fs, nodeFs , {
+    stat: function (path, callback) {
+        if (path.indexOf("dropbox://") === 0) {
+
+        }
+        else  {
+            nodeFs.stat(path, function (err, stats) {
+                if (!err) {
+                    err = brackets.fs.NO_ERROR; 
+                }
+                if (err && err.ENOENT) {
+                    err = brackets.fs.NOT_FOUND_ERR;
+                }
+                callback(err, stats, new Date());
+            });
+        }
+    },
+    readdir: function (path, callback ) {
+        if (path.indexOf("dropbox://") === 0) {
+        }
+        else 
+            nodeFs.readdir(path, callback);
+    }
+});
 var execDeviceCommand = function (cmd, callback) {
     console.log("cmd:" +  cmd);
     child_process.exec("sdb -s " + window.device + " " + cmd, callback);
@@ -155,10 +179,12 @@ function OpenLiveBrowser(callback, url, enableRemoteDebugging){
         questionMarkIndex =  url.indexOf("?");
         simulatorPath = url.substr(0, questionMarkIndex);
         simulatorPath = simulatorPath.slice(7);
+        simulatorPath = simulatorPath.substr(0, simulatorPath.lastIndexOf("/"));
         if (simulatorPath && brackets.platform === "win" && simulatorPath.charAt(0) === "/") {
             simulatorPath = simulatorPath.slice(1);
         }
-        require("file/NativeFileSystem").getFile(simulatorPath + "/package.json", {create: true}, function (fileEntry) {
+        var NativeFileSystem = require("file/NativeFileSystem").NativeFileSystem;
+        (new NativeFileSystem.DirectoryEntry(simulatorPath)).getFile(simulatorPath + "/package.json", {create: true}, function (fileEntry) {
             var packageJson = {
                 name: "Brackets",
                 main: url
