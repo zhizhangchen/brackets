@@ -147,28 +147,43 @@ function OpenLiveBrowser(callback, url, enableRemoteDebugging){
         var args = [];
         var newHeight = screen.availHeight/2;
         var nwWindow = gui.Window.get();
+        var simulatorPath, questionMarkIndex;
         if (enableRemoteDebugging) {
             args.push('--remote-debugging-port=9222');
             args.push('--no-toolbar');
         }
-        args.push("--url="+url);
-        liveBrowser = child_process.spawn(process.execPath, args);
-        liveBrowser.on('close', function () {
-            liveBrowser = null;
-        });
-        nwWindow.on('close', function() {
-            appshell.app.closeLiveBrowser();
-            nwWindow.close(true);
-        });
-        //Ubuntu 11.10 Unity env
-        if ((process.env["XDG_CURRENT_DESKTOP"] && process.env["XDG_CURRENT_DESKTOP"] === "Unity")
-            //Ubuntu 11.04 Unity env
-            || process.env["DESKTOP_SESSION"] === "gnome")
-            newHeight -= (window.outerHeight - window.innerHeight);
-        window.resizeTo(window.outerWidth, newHeight);
-        nwWindow.moveTo((screen.availWidth - window.outerWidth)/2,
-             screen.availTop + screen.availHeight/2);
-        callback(liveBrowser.pid > 0 ? 0: -1, liveBrowser.pid)
+        questionMarkIndex =  url.indexOf("?");
+        simulatorPath = url.substr(0, questionMarkIndex);
+        simulatorPath = simulatorPath.slice(7);
+        if (simulatorPath && brackets.platform === "win" && simulatorPath.charAt(0) === "/") {
+            simulatorPath = simulatorPath.slice(1);
+        }
+        require("file/NativeFileSystem").getFile(simulatorPath + "/package.json", {create: true}, function (fileEntry) {
+            var packageJson = {
+                name: "Brackets",
+                main: url
+            }
+            require("file/FileUtils").writeText(fileEntry, JSON.stringify(packageJson));
+            args.push(simulatorPath);
+            liveBrowser = child_process.spawn(process.execPath, args);
+            liveBrowser.on('close', function () {
+                liveBrowser = null;
+            });
+            nwWindow.on('close', function() {
+                appshell.app.closeLiveBrowser();
+                nwWindow.close(true);
+            });
+            //Ubuntu 11.10 Unity env
+            if ((process.env["XDG_CURRENT_DESKTOP"] && process.env["XDG_CURRENT_DESKTOP"] === "Unity")
+                //Ubuntu 11.04 Unity env
+                || process.env["DESKTOP_SESSION"] === "gnome")
+                newHeight -= (window.outerHeight - window.innerHeight);
+            window.resizeTo(window.outerWidth, newHeight);
+            nwWindow.moveTo((screen.availWidth - window.outerWidth)/2,
+                 screen.availTop + screen.availHeight/2);
+            callback(liveBrowser.pid > 0 ? 0: -1, liveBrowser.pid)
+        })
+
     }, 0);
 }
 function CloseLiveBrowser(callback){
