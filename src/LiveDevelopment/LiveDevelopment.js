@@ -116,14 +116,11 @@ define(function LiveDevelopment(require, exports, module) {
     var _liveDocument; // the document open for live editing.
     var _relatedDocuments; // CSS and JS documents that are used by the live HTML document
 
-    var _urlWrapper;
+    var _urlWrappers = [];
     var _closeScript;
     var _useDevTool;
-    function setUrlWrapper(wrapper) {
-        _urlWrapper = wrapper;
-    }
-    function getUrlWrapper(wrapper) {
-        return _urlWrapper;
+    function addUrlWrapper(wrapper) {
+        _urlWrappers.push(wrapper);
     }
     function setCloseScript(script) {
         _closeScript = script;
@@ -490,10 +487,14 @@ define(function LiveDevelopment(require, exports, module) {
         var result = new $.Deferred(),
             promise = result.promise();
         var doc = _getCurrentDocument();
-        var argUrl = _urlWrapper ? _urlWrapper(doc.root.url) : doc.root.url;
-        var url = argUrl.split(" ");
+        var argUrl = doc.root.url;
+        var url;
         var browserStarted = false;
         var retryCount = 0;
+        _urlWrappers.forEach(function (wrapper) {
+            argUrl = wrapper(argUrl);
+        })
+        url = argUrl.split(" ");
         _useDevTool = useDevTool;
 
         url = url[url.length - 1].split('-app=');
@@ -741,8 +742,7 @@ define(function LiveDevelopment(require, exports, module) {
     exports.showHighlight       = showHighlight;
     exports.hideHighlight       = hideHighlight;
     exports.redrawHighlight     = redrawHighlight;
-    exports.setUrlWrapper       = setUrlWrapper;
-    exports.getUrlWrapper       = getUrlWrapper;
+    exports.addUrlWrapper       = addUrlWrapper;
     exports.setCloseScript       = setCloseScript;
     exports.init                = init;
 });
