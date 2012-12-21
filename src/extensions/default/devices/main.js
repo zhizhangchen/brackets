@@ -48,7 +48,6 @@ define(function main(require, exports, module) {
     var _$button;
     /** Loads a less file as CSS into the document */
     var _$debugging = false;
-    var _simulatorUrlWraper;
     var _deviceSelect;
 
     function _loadLessFile(file, dir) {
@@ -112,13 +111,9 @@ define(function main(require, exports, module) {
                                             window.device = $(this).val();
                                             Inspector.setSocketsGetter(null);
                                             if (window.device === "Simulator") {
-                                                if (_simulatorUrlWraper)
-                                                    LiveDevelopment.setUrlWrapper(_simulatorUrlWraper);
                                                 ProjectManager.setBaseUrl("");
                                             }
                                             else {
-                                                _simulatorUrlWraper = _simulatorUrlWraper || LiveDevelopment.getUrlWrapper();
-                                                LiveDevelopment.setUrlWrapper(null);
                                                 ProjectManager.setBaseUrl("file:///opt/usr/apps/" + ProjectManager.getProjectId()
                                                     + "/res/wgt/");
                                                 inspectorJson = "Inspector_old.json";
@@ -132,6 +127,7 @@ define(function main(require, exports, module) {
                                        
                                         })
                                     });
+            window.device = "Simulator";
             ProjectManager.setBaseUrl("");
             child_process.exec('sdb devices',function(err, stdout, stderr) {
                 stdout.split("\n").forEach (function (device) {
