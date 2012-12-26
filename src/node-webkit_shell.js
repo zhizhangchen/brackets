@@ -3,6 +3,7 @@ var child_process = require('child_process');
 var liveBrowser;
 var ports = {};
 var nodeFs = require('fs');
+var os = require('os');
 function getDropbox(callback) {
     if (!window.dropbox) {
         require(["extensions/default/dropbox/dropbox"], function () {
@@ -55,22 +56,23 @@ $.extend(true, brackets.fs, nodeFs , {
                     stats.isFile =  function () {
                         return this.isFile;
                     }.bind($.extend({}, stats))
+                    stats.mtime = stats.modifiedAt;
                 }
                 if (err && err.status === 404) {
-                    err = brackets.fs.NOT_FOUND_ERR;
+                    err = brackets.fs.ERR_NOT_FOUND;
                 }
-                stats.mtime = stats.modifiedAt;
                 this(err, stats);
             }.bind(callback));
         })) {
             nodeFs.stat(path, function (err, stats) {
                 if (!err) {
                     err = brackets.fs.NO_ERROR; 
+                    stats.mtime = new Date();
                 }
-                if (err && err.ENOENT) {
-                    err = brackets.fs.NOT_FOUND_ERR;
+                if (err && err.code === "ENOENT") {
+                    err = brackets.fs.ERR_NOT_FOUND;
                 }
-                this(err, stats, new Date());
+                this(err, stats);
             }.bind(callback));
         }
     },
@@ -81,6 +83,9 @@ $.extend(true, brackets.fs, nodeFs , {
             }.bind(callback));
         }))
             nodeFs.readdir(path, callback);
+    },
+    makedir: function (path, permissions, callback ) {
+        nodeFs.mkdir(path, callback);
     },
     readFile: function (path, encoding, callback ) {
         if (!dropboxHandler(path, function (path, dropbox) {
@@ -188,8 +193,12 @@ function OpenLiveBrowser(callback, url, enableRemoteDebugging){
         var projectRoot = ProjectManager.getProjectRoot();
         var projectName = projectRoot.name;
         var projectId = ProjectManager.getProjectId();
-        process.chdir(projectRoot.fullPath);
-        console.log("dir changed to " + projectRoot.fullPath);
+            console.log(projectRoot.fullPath.substr(10));
+        if (projectRoot.fullPath.indexOf("dropbox://") === 0) {
+            process.chdir(os.tmpDir() + projectRoot.fullPath.substr(10));
+        }
+        else
+            process.chdir(projectRoot.fullPath);
         if (brackets.fs.existsSync(projectName + ".wgt"))
             brackets.fs.unlinkSync(projectName + ".wgt");
         child_process.exec("web-packaging", function (err, stdout, stderr) {
