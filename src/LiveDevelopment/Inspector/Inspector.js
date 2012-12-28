@@ -199,8 +199,6 @@ define(function Inspector(require, exports, module) {
     /** Set the height of dev tool div */
     function _setDevToolHeight() {
         var toolbarHeight = $('#main-toolbar').outerHeight(); 
-        console.log("content height:" + $(".content").outerHeight());
-        console.log("toolbar height:" + toolbarHeight);
         $("#dev-tools").height($(".content").outerHeight() - toolbarHeight);
     }
 
