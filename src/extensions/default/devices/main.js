@@ -101,13 +101,18 @@ define(function main(require, exports, module) {
         _$styleTag.remove();
     }
 
+    function _getInspectorJsonName (){
+        return  (window.device !== "Simulator" ||
+                    parseInt(navigator.userAgent.match(/Chrom(e|ium)\/([0-9]+)\./)[2]) <= 23)
+                        ? "Inspector_old.json": "Inspector.json";
+    }
+
     function _loadSelect() {
         var result = new $.Deferred();
         _loadStyle().done(function () {
             _deviceSelect = $("<select id='devices'><option value='Simulator'>Simulator</option></select>")
                                     .change(function() {
                                         $("option:selected", this).each(function () {
-                                            var inspectorJson = "Inspector.json";
                                             var realDeviceUrlMapper = function (url) {
                                                     var encodedDocPath = encodeURI(url);
                                                     var encodedProjectPath = encodeURI(ProjectManager.getProjectRoot().fullPath);
@@ -117,11 +122,11 @@ define(function main(require, exports, module) {
                                             Inspector.setSocketsGetter(null);
                                             if (window.device !== "Simulator") {
                                                 LiveDevelopment.addUrlMapper(realDeviceUrlMapper);
-                                                inspectorJson = "Inspector_old.json";
                                             }
                                             else 
                                                 LiveDevelopment.removeUrlMapper(realDeviceUrlMapper);
-                                            Inspector.setInspectorJson(inspectorJson).done( function () {
+
+                                            Inspector.setInspectorJson(_getInspectorJsonName()).done( function () {
                                                 if (Inspector.connected()) {
                                                     LiveDevelopment.close();
                                                     LiveDevelopment.open(Inspector.usingDevTool());
@@ -132,6 +137,7 @@ define(function main(require, exports, module) {
                                     });
             window.device = "Simulator";
             ProjectManager.setBaseUrl("");
+            Inspector.setInspectorJson(_getInspectorJsonName());
             child_process.exec('sdb devices',function(err, stdout, stderr) {
                 stdout.split("\n").forEach (function (device) {
                     var deviceInfo = device.split("\t");
