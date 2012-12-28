@@ -178,7 +178,7 @@ define(function main(require, exports, module) {
 
         Inspector.init(config);
         LiveDevelopment.init(config);
-        require("utils/ExtensionUtils").loadLessFile(module, "main.less");
+        require("utils/ExtensionUtils").loadStyleSheet(module, "main.less");
         _setupGoLiveButton();
         _setupGoLiveMenu();
 

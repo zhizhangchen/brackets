@@ -78,7 +78,7 @@ define(function main(require, exports, module) {
     }
 
     function load() {
-        ExtensionUtils.loadLessFile(module, "main.less").done( function (node) {
+        ExtensionUtils.loadStyleSheet(module, "main.less").done( function (node) {
             _styleTag = node;
             _button = $("<a>").text("Debug")
                 .attr({ href: "#", id: "denniskehrig-v8live-button" })

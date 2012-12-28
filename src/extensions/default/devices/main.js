@@ -92,7 +92,7 @@ define(function main(require, exports, module) {
     // --- Loaders and Unloaders ---
 
     function _loadStyle() {
-        return _loadLessFile("main.less", _extensionUrl()).done(function ($node) {
+        return brackets.getModule("utils/ExtensionUtils").loadStyleSheet(module, "main.less").done(function ($node) {
             _$styleTag = $node;
         });
     }
