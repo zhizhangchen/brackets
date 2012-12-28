@@ -171,7 +171,7 @@ define(function LiveDevelopment(require, exports, module) {
             url = encodedDocPath.replace(encodedProjectPath, baseUrl);
 
         } else {
-            var prefix = "file://";
+            var prefix = location.origin;
     
             if (brackets.platform === "win") {
                 // The path on Windows starts with a drive letter (e.g. "C:").
