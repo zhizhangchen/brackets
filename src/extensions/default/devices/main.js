@@ -137,7 +137,7 @@ define(function main(require, exports, module) {
                                     });
             window.device = "Simulator";
             Inspector.setInspectorJson(_getInspectorJsonName());
-            child_process.exec('sdb devices',function(err, stdout, stderr) {
+            child_process && child_process.exec('sdb devices',function(err, stdout, stderr) {
                 stdout.split("\n").forEach (function (device) {
                     var deviceInfo = device.split("\t");
                     if (deviceInfo.length === 3)
