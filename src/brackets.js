@@ -295,6 +295,7 @@ define(function (require, exports, module) {
                     $target.is("input[type=number]") ||
                     $target.is("input[type=password]") ||
                     $target.is("input:not([type])") || // input with no type attribute defaults to text
+                    $target.is("select") ||
                     $target.is("textarea");
     
             if (!isTextField) {
