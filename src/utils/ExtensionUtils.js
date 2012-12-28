@@ -134,8 +134,10 @@ define(function (require, exports, module) {
         // but *doesn't* work if it is prepended with "file://". Go figure.
         // However, the prefix "file://localhost" does work.
         if (brackets.platform === "win" && url.indexOf(":") !== -1) {
-            url = "file:///" + url;
+            url = location.origin + "/" + url;
         }
+        else
+            url = location.origin + url;
         
         return url;
     }
