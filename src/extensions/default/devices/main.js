@@ -136,7 +136,6 @@ define(function main(require, exports, module) {
                                         })
                                     });
             window.device = "Simulator";
-            ProjectManager.setBaseUrl("");
             Inspector.setInspectorJson(_getInspectorJsonName());
             child_process.exec('sdb devices',function(err, stdout, stderr) {
                 stdout.split("\n").forEach (function (device) {
@@ -166,7 +165,7 @@ define(function main(require, exports, module) {
                 var projectId = ProjectManager.getProjectId(),
                     deviceBaseDir = "/opt/usr/apps/" + projectId + "/res/wgt/";
                 
-                ProjectManager.setBaseUrl("file://" + deviceBaseDir);
+                ProjectManager.addUrlMapper(realDeviceUrlMapper);
             }
         });
     }
