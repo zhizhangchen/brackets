@@ -204,7 +204,7 @@ define(function Inspector(require, exports, module) {
 
     function _toggleDevTools(show) {
         if (show) {
-            _editingElements = $('.content > :not(#main-toolbar), #sidebar, #sidebar-resizer, #status-bar, .nav, .title-wrapper').filter(':visible');
+            _editingElements = $('.content > :not(#main-toolbar), #sidebar, #status-bar, .nav, .title-wrapper').filter(':visible');
         }
         if (_editingElements) {
             _editingElements.toggle(!show);
@@ -291,6 +291,7 @@ define(function Inspector(require, exports, module) {
         _usingDevTool = useDevTool;
         if (useDevTool) {
             var toolbar = $('#main-toolbar'),
+                devTools = $("#dev-tools")[0] || $("<div id='dev-tools'/>").appendTo(".content")[0],
                 toolbarHeight = toolbar.outerHeight();
             _devToolIframe = $('<iframe frameborder="0" style="overflow:hidden;width:100%;height:100%" height="100%" width="100%"></iframe>')
                 //.attr("src", "http://localhost:9222/devtools/devtools.html?" + socketURL.replace("ws://", "ws="))
@@ -332,7 +333,7 @@ define(function Inspector(require, exports, module) {
                     }
                     //_onConnect();
                 })
-                .appendTo($('#dev-tools'));
+                .appendTo(devTools);
                 $('.content').css('marginLeft', 0);
         }
         else {
