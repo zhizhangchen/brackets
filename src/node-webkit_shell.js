@@ -1,9 +1,15 @@
+if (!window.require) {
+    window.require = function () {
+        return null;
+    }
+}
 var gui = require('nw.gui');
 var child_process = require('child_process');
 var liveBrowser;
 var ports = {};
 var nodeFs = require('fs');
 var os = require('os');
+var upDate = new Date();
 function getDropbox(callback) {
     if (!window.dropbox) {
         require(["extensions/default/dropbox/dropbox"], function () {
@@ -44,12 +50,30 @@ function dropboxHandler(path, callback) {
     }
     return false;
 }
+function _nodeErrorToBracketsError (err) {
+    if (!err) {
+        err = brackets.fs.NO_ERROR;
+    }
+    if (err && err.code === "ENOENT") {
+        err = brackets.fs.ERR_NOT_FOUND;
+    }
+    return err;
+}
+function _dropboxErrorToBracketsError (err) {
+    if (!err) {
+        err = brackets.fs.NO_ERROR;
+    }
+    if (err && err.status === 404) {
+        err = brackets.fs.ERR_NOT_FOUND;
+    }
+    return err;
+}
 $.extend(true, brackets.fs, nodeFs , {
     stat: function (path, callback) {
         if (!dropboxHandler(path, function (path, dropbox) {
             dropbox.stat(path, function(err, stats) {
                 if (!err) {
-                    err = brackets.fs.NO_ERROR; 
+                    err = brackets.fs.NO_ERROR;
                     stats.isDirectory =  function () {
                         return this.isFolder;
                     }.bind(stats)
@@ -64,16 +88,33 @@ $.extend(true, brackets.fs, nodeFs , {
                 this(err, stats);
             }.bind(callback));
         })) {
-            nodeFs.stat(path, function (err, stats) {
-                if (!err) {
-                    err = brackets.fs.NO_ERROR; 
-                    stats.mtime = new Date();
-                }
-                if (err && err.code === "ENOENT") {
-                    err = brackets.fs.ERR_NOT_FOUND;
-                }
-                this(err, stats);
-            }.bind(callback));
+            if (nodeFs) {
+                nodeFs.stat(path, function (err, stats) {
+                    err = _nodeErrorToBracketsError(err);
+                    if (!err)
+                        stats.mtime = new Date();
+                    this(err, stats);
+                }.bind(callback));
+            }
+            else {
+                $.ajax({
+                    url: path,
+                    type:'HEAD',
+                    error: function() {
+                        callback(brackets.fs.ERR_NOT_FOUND);
+                    },
+                    success: function(data, textStatus, jqXHR){
+                        callback(brackets.fs.NO_ERROR, {
+                            isDirectory: function () {
+                                return path[path.length -1] === "/";
+                            },
+                            isFile: function () {
+                                return path[path.length -1] !== "/";
+                            },
+                        });
+                    }
+                });
+            }
         }
     },
     readdir: function (path, callback ) {
@@ -81,23 +122,59 @@ $.extend(true, brackets.fs, nodeFs , {
             dropbox.readdir(path.replace("dropbox://", ""), function(error, fileNames, folder, files) {
                 this(error, fileNames);
             }.bind(callback));
-        }))
-            nodeFs.readdir(path, callback);
+        })) {
+            if (nodeFs)
+                nodeFs.readdir(path, callback);
+            else {
+                $.get(path, function (data, textStatus, jqXHR) {
+                    var err = brackets.fs.NO_ERROR;
+                    var files;
+                    if (jqXHR.status === 404)
+                        err = brackets.fs.ERR_NOT_FOUND;
+                    if (data) {
+                        files = [];
+                        $(data).find('tr > td > a').each(function (i, link) {
+                            if ($(link).text() !== "Parent Directory")
+                                files.push($(link).attr('href'));
+                        })
+                    }
+                    callback(err, files);
+                })
+            }
+        }
     },
     makedir: function (path, permissions, callback ) {
-        nodeFs.mkdir(path, callback);
+        if(nodeFs)
+            nodeFs.mkdir(path, callback);
+        else {
+            callback(brackets.fs.ERR_CANT_WRITE);
+        }
     },
     readFile: function (path, encoding, callback ) {
         if (!dropboxHandler(path, function (path, dropbox) {
             dropbox.readFile(path, {binary:true}, callback);
-        }))
-            nodeFs.readFile(path, encoding, callback);
+        })) {
+            if (nodeFs)
+                nodeFs.readFile(path, encoding, callback);
+            else {
+                $.get(path, function (data, textStatus, jqXHR) {
+                    var err = brackets.fs.NO_ERROR;
+                    if (jqXHR.status === 404)
+                        err = brackets.fs.ERR_NOT_FOUND;
+                    callback(err, data);
+                })
+            }
+        }
     },
     writeFile: function (path, data, encoding, callback ) {
         if (!dropboxHandler(path, function (path, dropbox) {
-            dropbox.writeFile(path, data, {binary:true}, callback);
+            dropbox.writeFile(path, data, {binary:true}, function (err) {
+                callback(_dropboxErrorToBracketsError(err))
+            });
         }))
-            nodeFs.writeFile(path, data, encoding, callback);
+            nodeFs.writeFile(path, data, encoding, function (err) {
+                callback(_nodeErrorToBracketsError(err));
+            });
     }
 });
 var execDeviceCommand = function (cmd, callback) {
@@ -119,37 +196,6 @@ function ShowOpenDialog ( callback, allowMultipleSelection, chooseDirectories,
         callback(0, files);
     });
 } 
-(function() {
-    var fs = brackets.fs,
-        requestFile = process.cwd() + '/request',
-        responseFile = process.cwd() + '/response';
-
-    if (!fs.existsSync(requestFile))
-        fs.closeSync(fs.openSync(requestFile, "w"));
-    fs.watch(requestFile, function (event, filename) {
-        var Inspector = require("LiveDevelopment/Inspector/Inspector");
-        console.log('event is: ' + event);
-        if (filename) {
-            console.log('filename provided: ' + filename);
-        } else {
-            console.log('filename not provided');
-        }
-        var request = fs.readFileSync(requestFile, "ascii");
-        console.log("request:", request);
-        if ( request === "disconnect") {
-            console.log("try to disconnect inspector");
-            if (Inspector.connected()) {
-                Inspector.on("disconnect", function () {
-                    fs.writeFileSync(responseFile, "disconnected", "ascii");
-                });
-                Inspector.disconnect();
-            }
-            else
-                fs.writeFileSync(responseFile, "disconnected", "ascii");
-            fs.writeFileSync(requestFile, "", "ascii");
-       }
-    })
-})();
 function ReadDir(){
     throw arguments.callee.name
 }
@@ -169,7 +215,8 @@ function AbortQuit(){
     throw arguments.callee.name
 }
 function ShowDeveloperTools(){
-    gui.Window.get().showDevTools();
+    if (gui)
+        gui.Window.get().showDevTools();
 }
 function ReadFile(){
     throw arguments.callee.name
@@ -184,7 +231,7 @@ function DeleteFileOrDirectory(){
     throw arguments.callee.name
 }
 function GetElapsedMilliseconds(){
-    return process.uptime() * 1000;
+    return new Date().getTime() - upDate.getTime() ;
 }
 function OpenLiveBrowser(callback, url, enableRemoteDebugging){
     // enableRemoteDebugging flag is ignored on mac
@@ -247,12 +294,18 @@ function OpenLiveBrowser(callback, url, enableRemoteDebugging){
     setTimeout(function() {
         var args = [];
         var newHeight = screen.availHeight/2;
-        var nwWindow = gui.Window.get();
+        var nwWindow;
         var simulatorPath, questionMarkIndex;
+        if (!gui) {
+            window.open(url);
+            callback( 0 , 1);
+            return;
+        }
         if (enableRemoteDebugging) {
             args.push('--remote-debugging-port=9222');
             args.push('--no-toolbar');
         }
+        nwWindow = gui.Window.get();
         questionMarkIndex =  url.indexOf("?");
         simulatorPath = url.substr(0, questionMarkIndex);
         simulatorPath = simulatorPath.slice(7);
@@ -311,6 +364,9 @@ function GetCurrentLanguage(){
 function GetApplicationSupportDirectory(){
     var groupName = "Adobe",
         appName = "Brackets";
+    if (!window.process) {
+        return location.pathname.substr(0, location.pathname.lastIndexOf("/"));
+    }
     if (process.platform === "win32")
         return process.env["APPDATA"]+ "\\" + groupName + "\\" + appName;
     else
