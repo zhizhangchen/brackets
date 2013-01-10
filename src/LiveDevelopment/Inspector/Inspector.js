@@ -204,8 +204,10 @@ define(function Inspector(require, exports, module) {
 
     function _toggleDevTools(show) {
         if (show) {
-            _editingElements = $('.content > :not(#main-toolbar), #sidebar, #status-bar, .nav, .title-wrapper').filter(':visible');
-        }
+            _editingElements = $('.content > :not(#main-toolbar),  #status-bar, .nav, .title-wrapper, #sidebar').filter(':visible');
+            $('.content').css('marginLeft', 0);
+        } else
+            $('.content').css('marginLeft', 200);
         if (_editingElements) {
             _editingElements.toggle(!show);
             $('#dev-tools').toggle(show);
@@ -334,7 +336,6 @@ define(function Inspector(require, exports, module) {
                     //_onConnect();
                 })
                 .appendTo(devTools);
-                $('.content').css('marginLeft', 0);
         }
         else {
             _socket = new WebSocket(socketURL);
