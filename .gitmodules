@@ -19,3 +19,6 @@
 [submodule "src/extensions/default/dropbox"]
 	path = src/extensions/default/dropbox
 	url = git@github.com:zhizhangchen/brackets-dropbox.git
+[submodule "src/thirdparty/noVNC"]
+	path = src/thirdparty/noVNC
+	url = git@github.com:zhizhangchen/noVNC.git
