@@ -102,3 +102,13 @@ Not sure you needed the exclamation point there, but I like your enthusiasm.
 * **Twitter:** [@brackets](http://twitter.com/#!/brackets)
 * **IRC:** [#brackets on freenode](http://webchat.freenode.net/?channels=brackets)
 * **Developers mailing list:** http://groups.google.com/group/brackets-dev
+
+How to run brackets in cloud mode and enable remote emulator
+----------------------------------------------
+
+* git checkout cloud
+* git submodule init
+* git submodule update
+* ./start_server.sh
+* Then browse to localhost:8080 with your browser
+
