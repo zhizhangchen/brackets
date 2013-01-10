@@ -128,7 +128,9 @@ define(function LiveDevelopment(require, exports, module) {
         _urlMappers.push(mapper);
     }
     function removeUrlMapper(mapper) {
-        _urlMappers.splice(_urlMappers.indexOf(mapper), 1);
+        var index = _urlMappers.indexOf(mapper);
+        if (index !== -1)
+            _urlMappers.splice(index, 1);
     }
     function setCloseScript(script) {
         _closeScript = script;
