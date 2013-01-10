@@ -99,20 +99,22 @@ $.extend(true, brackets.fs, nodeFs , {
             else {
                 $.ajax({
                     url: path,
-                    type:'HEAD',
-                    error: function() {
-                        callback(brackets.fs.ERR_NOT_FOUND);
-                    },
+                    type: "HEAD",
+                    dataType: "html",
+                    error: function( jqXHR, textStatus, errorThrown) {
+                        console.warn("stat " + path + " " + textStatus + ": " + errorThrown);
+                        this.callback(brackets.fs.ERR_NOT_FOUND);
+                    }.bind({path: path, callback:callback}),
                     success: function(data, textStatus, jqXHR){
-                        callback(brackets.fs.NO_ERROR, {
+                        this(brackets.fs.NO_ERROR, {
                             isDirectory: function () {
-                                return path[path.length -1] === "/";
-                            },
+                                return this.getResponseHeader("IsDirectory");
+                            }.bind(jqXHR),
                             isFile: function () {
-                                return path[path.length -1] !== "/";
-                            },
+                                return !this.getResponseHeader("IsDirectory");
+                            }.bind(jqXHR),
                         });
-                    }
+                    }.bind(callback)
                 });
             }
         }
@@ -126,20 +128,31 @@ $.extend(true, brackets.fs, nodeFs , {
             if (nodeFs)
                 nodeFs.readdir(path, callback);
             else {
-                $.get(path, function (data, textStatus, jqXHR) {
-                    var err = brackets.fs.NO_ERROR;
-                    var files;
-                    if (jqXHR.status === 404)
-                        err = brackets.fs.ERR_NOT_FOUND;
-                    if (data) {
-                        files = [];
-                        $(data).find('tr > td > a').each(function (i, link) {
-                            if ($(link).text() !== "Parent Directory")
-                                files.push($(link).attr('href'));
-                        })
-                    }
-                    callback(err, files);
-                })
+                $.ajax({
+                    url: path,
+                    dataType: 'json',
+                    data: '{}',
+                    headers: {
+                        Accept : "text/json; charset=utf-8"
+                    },
+                    error: function (jqXHR, textStatus, errorThrown) {
+                        console.error("getting " + path + " failed:" + errorThrown);
+                    },
+                    success: function (data, textStatus, jqXHR) {
+                        var err = brackets.fs.NO_ERROR;
+                        var files;
+                        if (jqXHR.status === 404)
+                            err = brackets.fs.ERR_NOT_FOUND;
+                        if (data) {
+                            files = [];
+                            $(data).find('tr > td > a').each(function (i, link) {
+                                if ($(link).text() !== "Parent Directory")
+                                    files.push($(link).attr('href'));
+                            })
+                        }
+                        this(err, data);
+                    }.bind(callback)
+                });
             }
         }
     },
@@ -161,8 +174,8 @@ $.extend(true, brackets.fs, nodeFs , {
                     var err = brackets.fs.NO_ERROR;
                     if (jqXHR.status === 404)
                         err = brackets.fs.ERR_NOT_FOUND;
-                    callback(err, data);
-                })
+                    this(err, data);
+                }.bind(callback), "html")
             }
         }
     },
@@ -171,10 +184,15 @@ $.extend(true, brackets.fs, nodeFs , {
             dropbox.writeFile(path, data, {binary:true}, function (err) {
                 callback(_dropboxErrorToBracketsError(err))
             });
-        }))
-            nodeFs.writeFile(path, data, encoding, function (err) {
-                callback(_nodeErrorToBracketsError(err));
-            });
+        })){
+            if (nodeFs)
+                nodeFs.writeFile(path, data, encoding, function (err) {
+                    callback(_nodeErrorToBracketsError(err));
+                });
+            else {
+                callback(brackets.fs.NO_ERROR);
+            }
+        }
     }
 });
 var execDeviceCommand = function (cmd, callback) {
@@ -192,7 +210,6 @@ function ShowOpenDialog ( callback, allowMultipleSelection, chooseDirectories,
         var files = [];
         for (var i = 0; i < this.files.length; ++i)
           files.push(this.files[i].path.replace(/\\/g, "/"));
-       
         callback(0, files);
     });
 } 
