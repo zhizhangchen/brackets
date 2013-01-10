@@ -258,7 +258,65 @@ function GetElapsedMilliseconds(){
 }
 function OpenLiveBrowser(callback, url, enableRemoteDebugging){
     // enableRemoteDebugging flag is ignored on mac
-    if (window.device && window.device !== "Simulator") {
+    var NativeFileSystem = require("file/NativeFileSystem").NativeFileSystem;
+    var ProjectManager = require("project/ProjectManager"),
+        projectRoot = ProjectManager.getProjectRoot();
+
+    if (window.device && window.device.indexOf("RemoteEmulator") === 0) {
+        NativeFileSystem.requestNativeFileSystem(projectRoot.fullPath, function (fs) {
+            var copyDirectoryToServer = function (dirEntry) {
+                var  result = new $.Deferred();
+                dirEntry.createReader().readEntries(function (entries) {
+                    var promises = [];
+                    entries.forEach(function(entry) {
+                        var result, promise;
+                        if (entry.isDirectory) {
+                            promise = copyDirectoryToServer(entry);
+                        }
+                        else {
+                            result = new $.Deferred();
+                            promise = result.promise();
+                            brackets.fs.readFile(entry.fullPath, null, function (err, data) {
+                                if (err === brackets.fs.NO_ERROR) {
+                                    now.writeProjectFile(entry.fullPath, data)
+                                    this.resolve();
+                                }
+                                else
+                                    this.reject();
+                            }.bind(result));
+                        }
+                        promises.push(promise);
+                    });
+                    $.when.apply(null, promises).then( function () {
+                        this.resolve();
+                    }.bind(this));
+
+                }.bind(result));
+                return result.promise();
+            };
+            copyDirectoryToServer(fs.root).done(function () {
+                window.open("http://" + location.hostname + ":" + 6080 + "/vnc.html", "",  "width=550,height=850");
+                now.setDebuggingPort = function (port) {
+                    require("LiveDevelopment/Inspector/Inspector").setSocketsGetter(function () {
+                        var result = new $.Deferred();
+                        $.getJSON("/WidgetDebug?port="+port, function (data) {
+                            console.log("got debug url:" + data.inspector_url);
+                            result.resolve ([{
+                                webSocketDebuggerUrl:"ws://" + location.hostname + ":" + location.port +"/devtools/page/1?port=" + port,
+                                url:url,
+                                devtoolsFrontendUrl: "/" + data.inspector_url + "&&port=" + port
+                            }]);
+                        });
+                        return result;
+                    });
+                    callback(0,0);
+                }
+                now.startProject(window.device.split(":")[1], ProjectManager.getProjectRoot(), ProjectManager.getProjectId());
+            });
+        });
+        return;
+    }
+    else if (window.device && window.device !== "Simulator") {
         var ProjectManager = require("project/ProjectManager");
         var projectRoot = ProjectManager.getProjectRoot();
         var projectName = projectRoot.name;
@@ -336,7 +394,6 @@ function OpenLiveBrowser(callback, url, enableRemoteDebugging){
         if (simulatorPath && brackets.platform === "win" && simulatorPath.charAt(0) === "/") {
             simulatorPath = simulatorPath.slice(1);
         }
-        var NativeFileSystem = require("file/NativeFileSystem").NativeFileSystem;
         (new NativeFileSystem.DirectoryEntry(simulatorPath)).getFile(simulatorPath + "/package.json", {create: true}, function (fileEntry) {
             var packageJson = {
                 name: "Brackets",
