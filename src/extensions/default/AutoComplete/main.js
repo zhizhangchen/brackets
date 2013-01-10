@@ -70,7 +70,8 @@ define(function (require, exports, module) {
             var relPath, apiUrl;
 
             relPath = 'apis/' + platform + '/' + module + '.json';
-            apiUrl = _extensionUrl() + relPath;
+            apiUrl = brackets.getModule("utils/ExtensionUtils")
+                                .getModuleUrl(module, relPath);
 
             $.getJSON(apiUrl, function (apiObj) {
                 if (platform === module) {
