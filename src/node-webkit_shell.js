@@ -165,10 +165,16 @@ $.extend(true, brackets.fs, nodeFs , {
     },
     readFile: function (path, encoding, callback ) {
         if (!dropboxHandler(path, function (path, dropbox) {
-            dropbox.readFile(path, {binary:true}, callback);
-        })) {
+            dropbox.readFile(path, {binary:true}, function (err, data) {
+                err = _dropboxErrorToBracketsError(err);
+                this(err, data);
+            }.bind(this));
+        }.bind(callback))) {
             if (nodeFs)
-                nodeFs.readFile(path, encoding, callback);
+                nodeFs.readFile(path, encoding, function (err, data) {
+                    err = _nodeErrorToBracketsError(err);
+                    this(err, data);
+                }.bind(callback));
             else {
                 $.get(path, function (data, textStatus, jqXHR) {
                     var err = brackets.fs.NO_ERROR;
