@@ -101,73 +101,91 @@ define(function main(require, exports, module) {
         _$styleTag.remove();
     }
 
+    function _getDeviceProjectPath() {
+        return "/opt/usr/apps/" + ProjectManager.getProjectId() + "/res/wgt/";
+    }
+
+    function _setDevice(deviceName) {
+        var realDeviceUrlMapper = function (url) {
+                var encodedDocPath = encodeURI(url);
+                var encodedProjectPath = encodeURI(ProjectManager.getProjectRoot().fullPath);
+                return url.replace(new RegExp(".*" + encodedProjectPath), "file://" + _getDeviceProjectPath());
+            };
+        deviceName = deviceName || localStorage.getItem("brackets-device-name") || "Simulator";
+        localStorage.setItem("brackets-device-name", deviceName);
+        window.device = deviceName;
+        _deviceSelect.val(deviceName);
+        Inspector.setSocketsGetter(null);
+        if (deviceName !== "Simulator") {
+            LiveDevelopment.addUrlMapper(realDeviceUrlMapper);
+        }
+        else
+            LiveDevelopment.removeUrlMapper(realDeviceUrlMapper);
+        Inspector.setInspectorJson(_getInspectorJsonName()).done( function () {
+            if (Inspector.connected()) {
+                LiveDevelopment.close();
+                LiveDevelopment.open(Inspector.usingDevTool());
+            }
+        });
+    }
+
+
     function _getInspectorJsonName (){
         return  (window.device !== "Simulator" ||
                     parseInt(navigator.userAgent.match(/Chrom(e|ium)\/([0-9]+)\./)[2]) <= 23)
                         ? "Inspector_old.json": "Inspector.json";
     }
 
-    function _loadSelect() {
+    function _addDevices(stdout, valuePrefix, labelPrefix, htmlSaveCallback) {
+        stdout.split("\n").forEach (function (device) {
+            var deviceInfo = device.split("\t");
+            if (deviceInfo.length === 3){
+                _deviceSelect.append($("<option value='" + valuePrefix + deviceInfo[0] + "'>" + labelPrefix + deviceInfo[2] + "</option>"));
+                $(LiveDevelopment).on("liveHTMLSaved", function (event,doc) {
+                    if (this === window.device)
+                        htmlSaveCallback(event, doc);
+                }.bind(valuePrefix + deviceInfo[0]));
+            }
+        })
+        _setDevice();
+    }
+
+    function load() {
         var result = new $.Deferred();
         _loadStyle().done(function () {
             _deviceSelect = $("<select id='devices'><option value='Simulator'>Simulator</option></select>")
                                     .change(function() {
                                         $("option:selected", this).each(function () {
-                                            var realDeviceUrlMapper = function (url) {
-                                                    var encodedDocPath = encodeURI(url);
-                                                    var encodedProjectPath = encodeURI(ProjectManager.getProjectRoot().fullPath);
-                                                    return url.replace(new RegExp("file:/{2,3}" + encodedProjectPath), "file:///opt/usr/apps/" + ProjectManager.getProjectId() + "/res/wgt/");
-                                                };
-                                            window.device = $(this).val();
-                                            Inspector.setSocketsGetter(null);
-                                            if (window.device !== "Simulator") {
-                                                LiveDevelopment.addUrlMapper(realDeviceUrlMapper);
-                                            }
-                                            else 
-                                                LiveDevelopment.removeUrlMapper(realDeviceUrlMapper);
-
-                                            Inspector.setInspectorJson(_getInspectorJsonName()).done( function () {
-                                                if (Inspector.connected()) {
-                                                    LiveDevelopment.close();
-                                                    LiveDevelopment.open(Inspector.usingDevTool());
-                                                }
-                                            });
-                                       
+                                            _setDevice($(this).val());
                                         })
                                     });
-            window.device = "Simulator";
-            Inspector.setInspectorJson(_getInspectorJsonName());
             child_process && child_process.exec('sdb devices',function(err, stdout, stderr) {
-                stdout.split("\n").forEach (function (device) {
-                    var deviceInfo = device.split("\t");
-                    if (deviceInfo.length === 3)
-                        _deviceSelect.append($("<option value='" + deviceInfo[0] + "'>" + deviceInfo[2] + "</option>"));
-                    var projectId = ProjectManager.getProjectId(),
-                        deviceBaseDir = "/opt/usr/apps/" + projectId + "/res/wgt/";
-                    $(LiveDevelopment).on("liveHTMLSaved", function (event, doc) {
-                        execDeviceCommand("push " + doc.file.fullPath + " " + deviceBaseDir, function () {
-                            Inspector.Page.reload();
-                        });
-                });
+                _addDevices(stdout, "", "", function (event, doc) {
+                    execDeviceCommand("push " + doc.file.fullPath + " " +
+                        _getProjectPath(), function () {
+                        Inspector.Page.reload();
+                    });
                 })
             });
+            require(["/nowjs/now.js"], function () {
+                now.ready(function () {
+                    now.getDevices(function(err, stdout, stderr) {
+                        _addDevices(stdout, "RemoteEmulator:", "(Remote)", function (event, doc) {
+                            now.pushProjectFileToDevice(ProjectManager.getProjectId(),
+                                doc.file.fullPath, doc.getText(true),
+                                window.device.split(":")[1], function () {
+                                Inspector.Page.reload();
+                            });
+                        })
+                    })
+                })
+            })
+            _setDevice();
             _deviceSelect.insertBefore('#main-toolbar .buttons :first-child');
             result.resolve();
         }).fail(result.reject);
 
         return result.promise();
-    }
-
-    function load() {
-        _loadSelect();
-        $(ProjectManager).on("projectOpen", function (projectRoot) {
-            if (window.device !== "Simulator") {
-                var projectId = ProjectManager.getProjectId(),
-                    deviceBaseDir = "/opt/usr/apps/" + projectId + "/res/wgt/";
-                
-                ProjectManager.addUrlMapper(realDeviceUrlMapper);
-            }
-        });
     }
 
     function unload() {
