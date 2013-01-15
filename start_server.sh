@@ -2,8 +2,8 @@
 NOVNC_DIR=src/thirdparty/noVNC
 sudo apt-get install tightvncserver
 mkdir -p ~/.vnc
-cp $NOVNC_DIR/xstartup ~/.vnc
+cp $NOVNC_DIR/xstartup $NOVNC_DIR/start_emulator.sh ~/.vnc
 vncserver
-$NOVNC_DIR/utils/launch.sh --vnc localhost:5901
+$NOVNC_DIR/utils/launch.sh --vnc localhost:5901 &
 
-node src/extensions/devices/EmulatorServer.js
+node src/extensions/default/devices/EmulatorServer.js
