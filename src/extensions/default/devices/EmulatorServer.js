@@ -1,6 +1,6 @@
 var connect = require('connect');
 var httpProxy = require('http-proxy');
-var serverRoot="../../../..";
+var serverRoot= __dirname + "/../../../..";
 var proxy = new httpProxy.RoutingProxy();
 var http = require('http');
 var server = connect()
