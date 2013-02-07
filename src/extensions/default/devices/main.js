@@ -105,12 +105,12 @@ define(function main(require, exports, module) {
         return "/opt/usr/apps/" + ProjectManager.getProjectId() + "/res/wgt/";
     }
 
+    var realDeviceUrlMapper = function (url) {
+            var encodedDocPath = encodeURI(url);
+            var encodedProjectPath = encodeURI(ProjectManager.getProjectRoot().fullPath);
+            return url.replace(new RegExp(".*" + encodedProjectPath), "file://" + _getDeviceProjectPath());
+        };
     function _setDevice(deviceName) {
-        var realDeviceUrlMapper = function (url) {
-                var encodedDocPath = encodeURI(url);
-                var encodedProjectPath = encodeURI(ProjectManager.getProjectRoot().fullPath);
-                return url.replace(new RegExp(".*" + encodedProjectPath), "file://" + _getDeviceProjectPath());
-            };
         deviceName = deviceName || localStorage.getItem("brackets-device-name") || "Simulator";
         localStorage.setItem("brackets-device-name", deviceName);
         window.device = deviceName;
