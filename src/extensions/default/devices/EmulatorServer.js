@@ -3,22 +3,24 @@ var httpProxy = require('http-proxy');
 var serverRoot= __dirname + "/../../../..";
 var proxy = new httpProxy.RoutingProxy();
 var http = require('http');
+var commonApps = connect()
+        .use(connect.cookieParser())
+        .use(connect.cookieSession({ secret: 'keyboard cat', cookie: { maxAge: 60000 }}))
+        .use(connect.query());
+
 var server = connect()
         .use(connect.favicon())
         .use(connect.logger('dev'))
         .use("/brackets", connect.static(serverRoot, {hidden:true}))
         .use("/brackets", connect.directory(serverRoot, {hidden: true}))
-        .use(connect.cookieParser())
-        .use(connect.session({ secret: 'keyboard cat', key: 'sid', cookie: { secure: true }}))
+        .use(commonApps)
         .use( function (req, res, next) {
             if (req.url.indexOf("/WidgetDebug") === 0 ||
                 req.url.indexOf("/inspector.html?") === 0) {
-                connect.query()(req, res, function() {});
-                console.log("query:" + JSON.stringify(req.query));
-                req.session.port = req.query['port'];
+                if (req.query.port)
+                    req.session.port = req.query.port;
                 console.log("session.port:" + req.session.port);
             }
-            console.log("proxying to localhost:" + req.session.port);
             proxy.proxyRequest(req, res, {
                           port: req.session.port,
                           host: 'localhost',
@@ -29,14 +31,16 @@ server.on('upgrade', function(req, socket, head) {
   // Proxy websocket requests
   console.log("Upgrading " + req.url);
   if (req.url.indexOf ("/socket.io") !== 0) {
-    connect.query()(req, null, function() {});
+    req.originalUrl = req.url;
+    commonApps.handle(req, { on: function () {} }, function (err) {
+        console.warn("Handle websocket request error", err);
+    });
     var wsProxy = new httpProxy.HttpProxy({
       target: {
         host: 'localhost',
-        port: req.query['port']
+        port: req.session.port
       }
     });
-    console.log("proxying to localhost:" + req.query.port);
     wsProxy.proxyWebSocketRequest(req, socket, head);
   }
 });
