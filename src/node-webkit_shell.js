@@ -295,9 +295,27 @@ function OpenLiveBrowser(callback, url, enableRemoteDebugging){
                 return result.promise();
             };
             copyDirectoryToServer(fs.root).done(function () {
-                window.open("http://" + location.hostname + ":" + 6080 + "/vnc.html", "",  "width=550,height=850");
+                var Inspector = require("LiveDevelopment/Inspector/Inspector");
+                var iframe = $('<iframe id="remoteEmulator" frameborder="0" style="overflow:hidden;width:100%;height:100%" height="100%" width="100%"></iframe>')
+                        .attr("src", "http://" + location.hostname + ":" + 6080 + "/vnc.html")
+                var div = $('<div/>').append(iframe).css("overflow", "hidden")
+                        .dialog({width:"550", height:"770", minWidth: "550",
+                            minHeight: "770", position:"right",
+                            close: function () {
+                                Inspector.setSocketsGetter(null);
+                                Inspector.disconnect();
+                            }
+                        })
+                $(Inspector).off('connect.RemoteEmulator');
+                $(Inspector).on('connect.RemoteEmulator', function () {
+                    this.dialog("open");
+                }.bind(div));
+                $(Inspector).on('disconnect', function () {
+                    this.dialog("close");
+                }.bind(div));
                 now.setDebuggingPort = function (port) {
-                    require("LiveDevelopment/Inspector/Inspector").setSocketsGetter(function () {
+                    console.log("setting debugging port:" + port);
+                    Inspector.setSocketsGetter(function () {
                         var result = new $.Deferred();
                         $.getJSON("/WidgetDebug?port="+port, function (data) {
                             console.log("got debug url:" + data.inspector_url);
@@ -379,7 +397,7 @@ function OpenLiveBrowser(callback, url, enableRemoteDebugging){
         var simulatorPath, questionMarkIndex;
         if (!gui) {
             window.open(url);
-            callback( 0 , 1);
+            this( 0 , 1);
             return;
         }
         if (enableRemoteDebugging) {
@@ -422,18 +440,29 @@ function OpenLiveBrowser(callback, url, enableRemoteDebugging){
             });
         })
 
-    }, 0);
+    }.bind(callback), 0);
 }
 function CloseLiveBrowser(callback){
     if (callback && liveBrowser) {
-        liveBrowser.on('close', function () {
-            callback(0);
-        });
+        if (liveBrowser.pid)
+            liveBrowser.on('close', function () {
+                callback(0);
+            });
+        else
+            $(liveBrowser).bind("beforeunload",  function (){
+                callback(0);
+            })
     }
     else if (callback)
         callback(-1);
     if (liveBrowser)
-        process.kill(liveBrowser.pid, "SIGTERM");
+        if (liveBrowser.pid)
+            process.kill(liveBrowser.pid, "SIGTERM");
+        else {
+            liveBrowser.close();
+            liveBrowser = null;
+        }
+
 }
 function OpenURLInDefaultBrowser(){
     throw arguments.callee.name
