@@ -142,7 +142,7 @@ define(function LiveDevelopment(require, exports, module) {
 
     /** Convert a URL to a local full file path */
     function _urlToPath(url) {
-        var path,
+        var path = url,
             baseUrl = ProjectManager.getBaseUrl();
 
         if (baseUrl !== "" && url.indexOf(baseUrl) === 0) {
