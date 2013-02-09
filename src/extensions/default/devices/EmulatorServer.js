@@ -92,41 +92,69 @@ everyone.now.pushProjectFileToDevice = function(projectId, fullPath, data, devic
 everyone.now.startProject = function(device, projectRoot, projectId){
     var projectPath = projectsRoot +"/" + projectRoot.fullPath;
     var projectName = projectRoot.name.replace(/ /g, "\\ ");
-    var pkgName = projectName + ".wgt";
-    var portKey = device + "." + projectId;
-    var TEST_WIDGETS_DIR = "/opt/usr/apps/widgets/test-widgets/";
-    var tmpPkg = "/tmp/" + pkgName;
-    var testPkg = TEST_WIDGETS_DIR + pkgName;
-    var WRT_LAUNCHER = "/usr/bin/wrt-launcher";
-    var WGT_CMD = "pkgcmd -t wgt -q ";
-    var namedWgtCmd = WGT_CMD + " -n " + projectId;
+    var pkgName = projectName+".wgt";
+    var projectInfo = {
+        projectId: projectId,
+        projectName: projectName,
+        TEST_WIDGETS_DIR: "/opt/usr/apps/widgets/test-widgets/",
+        pkgName: pkgName,
+        tmpPkg: "/tmp/" + pkgName
+    };
+    var deploy_scripts = fs.readFileSync("src/deploy_app.sh");
     var _execDeviceCommand = function (cmd, callback) {
         execDeviceCommand(device, cmd, callback);
     }
-    console.log("Starting project:" + projectPath + ". projectId:" + projectId);
     if (!fs.existsSync(projectPath)) {
         console.error("project path doesn't exist");
         return;
     }
+    var cwd = process.cwd();
     process.chdir(projectPath);
     if (fs.existsSync(projectRoot.name + ".wgt"))
         fs.unlinkSync(projectRoot.name + ".wgt");
+    if (!fs.existsSync("config.xml")) {
+        child_process.exec(cwd + "/src/web_gen.sh " + projectName, function (err, stdout, stderr) {
+            console.log(stdout);
+            console.log(stderr);
+            projectInfo.projectId = /<tizen:application id="(.*)"/.exec(fs.readFileSync("config.xml"))[1];
+        })
+    }
+    else
+        projectInfo.projectId = /<tizen:application id="(\S*)"/.exec(fs.readFileSync("config.xml"))[1];
+    if (!fs.existsSync(".project")) {
+        var templatePath = serverRoot + "/src/extensions/default/tizen/WebProject/",
+            replaceProjectName = function (file) {
+                fs.readFile(file, "ascii", function (err, data) {
+                    fs.writeFile(file,
+                        data.replace(/#PROJECT_NAME#/g,
+                            projectRoot.name),
+                        "ascii");
+                });
+            },
+            copyTemplateFile = function (file, replaceName) {
+                fs.createReadStream(templatePath + file)
+                    .on('end', function () {
+                        if (replaceName)
+                            replaceProjectName(projectPath + file);
+                    })
+                    .pipe(fs.createWriteStream(projectPath + file));
+            };
+        copyTemplateFile(".project", true);
+    }
+    console.log("Starting project:" + projectPath + ". projectId:" + projectInfo.projectId);
     child_process.exec("web-packaging", function (err, stdout, stderr) {
         console.log(stdout);
         console.log(stderr);
-        _execDeviceCommand("shell mdkir -p " + TEST_WIDGETS_DIR, function () {
-            _execDeviceCommand("push " + pkgName + " "+ tmpPkg, function(err, stdout, stderr) {
+        _execDeviceCommand("shell mdkir -p " + projectInfo.TEST_WIDGETS_DIR, function () {
+            _execDeviceCommand("push " + pkgName + " "+ projectInfo.tmpPkg, function(err, stdout, stderr) {
+                process.chdir(cwd);
                 console.log(stdout);
                 console.log(stderr);
-                _execDeviceCommand("shell 'unzip -p " + tmpPkg
-                    + " > t && unzip -p " + testPkg + ">t1 ;if [ " + ports[portKey]
-                    + " == undefined ] || ! diff t t1 >/dev/null  ; then cp "
-                    + tmpPkg + " " + TEST_WIDGETS_DIR
-                    + " && " + WRT_LAUNCHER + " --developer-mode 1 && " + namedWgtCmd
-                    + " -s  && " + namedWgtCmd + " -u;"
-                    + WGT_CMD + " -i -p " + testPkg + " && " + WRT_LAUNCHER + " --start "
-                    + projectId + " --debug --timeout=90 ; else echo port: "
-                    + ports[portKey] + "; fi'", function (err, stdout, stderr) {
+                var env = "";
+                for (var prop in projectInfo)
+                    env += prop + "=" + projectInfo[prop] + ";"
+                _execDeviceCommand("shell '" + env
+                    + deploy_scripts + "'", function (err, stdout, stderr) {
                     console.log(stderr);
                     stdout.split("\n").forEach (function (line) {
                         console.log("line:" + line);
@@ -139,7 +167,6 @@ everyone.now.startProject = function(device, projectRoot, projectId){
                                 console.log("getting debug url:" + port);
                                 everyone.now.setDebuggingPort(port);
                             });
-                            ports[portKey] = port;
                         }
                     })
                 });

@@ -1,7 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<widget xmlns="http://www.w3.org/ns/widgets" xmlns:tizen="http://tizen.org/ns/widgets" id="http://yourdomain/HelloTizen" version="1.0" viewmodes="windowed">
-    <tizen:application id="5uErxuseuj" required_version="1.0"/>
-    <content src="getting_started.html"/>
-    <icon src="icon.png"/>
-    <name>Getting Started</name>
-</widget>
