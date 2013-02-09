@@ -40,6 +40,8 @@ define(function main(require, exports, module) {
         LiveDevelopment = brackets.getModule("LiveDevelopment/LiveDevelopment"),
         ProjectManager  = brackets.getModule("project/ProjectManager"),
         DocumentManager = brackets.getModule("document/DocumentManager"),
+        Dialogs         = brackets.getModule("widgets/Dialogs"),
+        Strings         = brackets.getModule("strings"),
         Inspector      = brackets.getModule("LiveDevelopment/Inspector/Inspector");
 
     // <style> tag containing CSS code compiled from LESS
@@ -118,15 +120,42 @@ define(function main(require, exports, module) {
         Inspector.setSocketsGetter(null);
         if (deviceName !== "Simulator") {
             LiveDevelopment.addUrlMapper(realDeviceUrlMapper);
+            Inspector.setInspectorJson(_getInspectorJsonName()).done( function () {
+                if (Inspector.connected()) {
+                    LiveDevelopment.close();
+                    LiveDevelopment.open(Inspector.usingDevTool());
+                }
+            });
         }
-        else
+        else if (child_process) {
             LiveDevelopment.removeUrlMapper(realDeviceUrlMapper);
-        Inspector.setInspectorJson(_getInspectorJsonName()).done( function () {
-            if (Inspector.connected()) {
-                LiveDevelopment.close();
-                LiveDevelopment.open(Inspector.usingDevTool());
-            }
-        });
+            Inspector.setInspectorJson(_getInspectorJsonName()).done( function () {
+                if (Inspector.connected()) {
+                    LiveDevelopment.close();
+                    LiveDevelopment.open(Inspector.usingDevTool());
+                }
+            });
+        }
+        else {
+            Inspector.getAvailableSockets().done(function() {
+                LiveDevelopment.removeUrlMapper(realDeviceUrlMapper);
+                Inspector.setInspectorJson(_getInspectorJsonName()).done( function () {
+                    if (Inspector.connected()) {
+                        LiveDevelopment.close();
+                        LiveDevelopment.open(Inspector.usingDevTool());
+                    }
+                });
+            }).fail(function () {
+                Dialogs.showModalDialog(
+                    Dialogs.DIALOG_ID_INFO,
+                    Strings.LIVE_DEVELOPMENT_INFO_TITLE,
+                    "To support Simulator live development, please restart your chrome/chromium browser with \"--remote-debugging-port=9222 --disable-web-security\""
+                ).done(function (id) {
+                    var simulatorOption = _deviceSelect.find("option:selected");
+                    _setDevice((simulatorOption.next('option') || simulatorOption.prev('option')).val());
+                });
+            });
+        }
     }
 
 
@@ -147,7 +176,7 @@ define(function main(require, exports, module) {
                 }.bind(valuePrefix + deviceInfo[0]));
             }
         })
-        _setDevice();
+        _deviceSelect.val(window.device);
     }
 
     function load() {
