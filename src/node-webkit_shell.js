@@ -113,6 +113,7 @@ $.extend(true, brackets.fs, nodeFs , {
                             isFile: function () {
                                 return !this.getResponseHeader("IsDirectory");
                             }.bind(jqXHR),
+                            mtime: new Date(jqXHR.getResponseHeader("Last-Modified"))
                         });
                     }.bind(callback)
                 });
