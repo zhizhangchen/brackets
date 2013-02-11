@@ -413,7 +413,8 @@ define(function Inspector(require, exports, module) {
     function init(theConfig) {
         exports.config = theConfig;
         $(window).resize(_setDevToolHeight);
-        setInspectorJson("Inspector.json");
+        if (!exports.Inspector)
+            setInspectorJson("Inspector.json");
         setInterval(function () {
             var toolbar = $('#main-toolbar');
             toolbar.offset({top: 0, left: toolbar.offset().left});
