@@ -153,7 +153,7 @@ define(function LiveDevelopment(require, exports, module) {
         } else if (url.indexOf("file://") === 0) {
             // Convert a file URL to local file path
             path = url.slice(7);
-            if (path && brackets.platform === "win" && path.charAt(0) === "/") {
+            if (path && !brackets.inBrowser && brackets.platform === "win" && path.charAt(0) === "/") {
                 path = path.slice(1);
             }
         }
@@ -175,7 +175,7 @@ define(function LiveDevelopment(require, exports, module) {
         } else {
             var prefix = location.origin;
     
-            if (brackets.platform === "win") {
+            if (brackets.platform === "win" &&  path.charAt(0) !== "/") {
                 // The path on Windows starts with a drive letter (e.g. "C:").
                 // In order to make it a valid file: URL we need to add an
                 // additional slash to the prefix.
