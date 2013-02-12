@@ -12,7 +12,6 @@ var os = require('os');
 var upDate = new Date();
 function getDropbox(callback) {
     if (!window.dropbox) {
-        require(["extensions/default/dropbox/dropbox"], function () {
             var dropboxOAuthDriver = $.extend({}, new Dropbox.Drivers.Redirect ({rememberUser: true}), {
                 //url: function() { return ""; },
                 url: function() { return "";},
@@ -35,8 +34,7 @@ function getDropbox(callback) {
 
             //dropbox.authDriver(new Dropbox.Drivers.Redirect({ rememberUser: true}));
             dropbox.authDriver(dropboxOAuthDriver);
-            dropbox.authenticate(this);
-        }.bind(callback));
+            dropbox.authenticate(callback);
     }
     else
         callback(null, dropbox);

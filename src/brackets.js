@@ -101,6 +101,7 @@ define(function (require, exports, module) {
     require("help/HelpCommandHandlers");
     require("search/FindInFiles");
     require("search/FindReplace");
+    require("extensions/default/dropbox/dropbox");
     
     PerfUtils.addMeasurement("brackets module dependencies resolved");
 
