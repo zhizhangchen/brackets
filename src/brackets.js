@@ -156,7 +156,7 @@ define(function (require, exports, module) {
         EditorManager.setEditorHolder($("#editor-holder"));
 
         // Let the user know Brackets doesn't run in a web browser yet
-        if (brackets.inBrowser) {
+        if (!brackets.fs) {
             Dialogs.showModalDialog(
                 Dialogs.DIALOG_ID_ERROR,
                 Strings.ERROR_IN_BROWSER_TITLE,
