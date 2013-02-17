@@ -36,9 +36,9 @@ define(function (require, exports, module) {
      * Load CodeMirror2 utilities
      */
     function _getCodeMirrorModule() {
-        require("../../../thirdparty/CodeMirror2/lib/util/javascript-hint");
-        require("../../../thirdparty/CodeMirror2/lib/util/simple-hint");
-        brackets.getModule("utils/ExtensionUtils").loadStyleSheet(module, "../../../thirdparty/CodeMirror2/lib/util/simple-hint.css");
+        require("../../../thirdparty/CodeMirror2/addon/hint/javascript-hint");
+        require("../../../thirdparty/CodeMirror2/addon/hint/simple-hint");
+        brackets.getModule("utils/ExtensionUtils").loadStyleSheet(module, "../../../thirdparty/CodeMirror2/addon/hint/simple-hint.css");
     }
 
     /**
