@@ -89,12 +89,12 @@ everyone.now.pushProjectFileToDevice = function(projectId, fullPath, data, devic
         execDeviceCommand(device, "push " + serverFullPath.replace(/ /g, "\\ ") + " " + deviceBaseDir, callback);
     });
 }
-everyone.now.startProject = function(device, projectRoot, projectId){
+everyone.now.startProject = function(device, projectRoot, callback){
     var projectPath = projectsRoot +"/" + projectRoot.fullPath;
     var projectName = projectRoot.name.replace(/ /g, "\\ ");
     var pkgName = projectName+".wgt";
     var projectInfo = {
-        projectId: projectId,
+        projectId: "",
         projectName: projectName,
         TEST_WIDGETS_DIR: "/opt/usr/apps/widgets/test-widgets/",
         pkgName: pkgName,
@@ -142,6 +142,7 @@ everyone.now.startProject = function(device, projectRoot, projectId){
         copyTemplateFile(".project", true);
     }
     console.log("Starting project:" + projectPath + ". projectId:" + projectInfo.projectId);
+    callback && callback(projectInfo.projectId);
     child_process.exec("web-packaging", function (err, stdout, stderr) {
         console.log(stdout);
         console.log(stderr);

@@ -248,6 +248,10 @@ define(function (require, exports, module) {
         return _projectId;
     }
 
+    function setProjectId(projectId) {
+        return _projectId = projectId;
+    }
+
     /**
      * Sets the encoded Base URL of the currently loaded project.
      * @param {String}
@@ -1384,6 +1388,7 @@ define(function (require, exports, module) {
     exports.getBaseUrl               = getBaseUrl;
     exports.setBaseUrl               = setBaseUrl;
     exports.getProjectId             = getProjectId;
+    exports.setProjectId             = setProjectId;
     exports.isWithinProject          = isWithinProject;
     exports.makeProjectRelativeIfPossible = makeProjectRelativeIfPossible;
     exports.shouldShow               = shouldShow;
