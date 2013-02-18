@@ -117,61 +117,64 @@ everyone.now.startProject = function(device, projectRoot, callback){
             console.log(stdout);
             console.log(stderr);
             projectInfo.projectId = /<tizen:application id="(.*)"/.exec(fs.readFileSync("config.xml"))[1];
+            process.chdir(cwd);
+            everyone.now.startProject(device, projectRoot, callback);
         })
     }
-    else
+    else {
         projectInfo.projectId = /<tizen:application id="(\S*)"/.exec(fs.readFileSync("config.xml"))[1];
-    if (!fs.existsSync(".project")) {
-        var templatePath = serverRoot + "/src/extensions/default/tizen/WebProject/",
-            replaceProjectName = function (file) {
-                fs.readFile(file, "ascii", function (err, data) {
-                    fs.writeFile(file,
-                        data.replace(/#PROJECT_NAME#/g,
-                            projectRoot.name),
-                        "ascii");
-                });
-            },
-            copyTemplateFile = function (file, replaceName) {
-                fs.createReadStream(templatePath + file)
-                    .on('end', function () {
-                        if (replaceName)
-                            replaceProjectName(projectPath + file);
-                    })
-                    .pipe(fs.createWriteStream(projectPath + file));
-            };
-        copyTemplateFile(".project", true);
-    }
-    console.log("Starting project:" + projectPath + ". projectId:" + projectInfo.projectId);
-    callback && callback(projectInfo.projectId);
-    child_process.exec("web-packaging", function (err, stdout, stderr) {
-        console.log(stdout);
-        console.log(stderr);
-        _execDeviceCommand("shell mdkir -p " + projectInfo.TEST_WIDGETS_DIR, function () {
-            _execDeviceCommand("push " + pkgName + " "+ projectInfo.tmpPkg, function(err, stdout, stderr) {
-                process.chdir(cwd);
-                console.log(stdout);
-                console.log(stderr);
-                var env = "";
-                for (var prop in projectInfo)
-                    env += prop + "=" + projectInfo[prop] + ";"
-                _execDeviceCommand("shell '" + env
-                    + deploy_scripts + "'", function (err, stdout, stderr) {
+        if (!fs.existsSync(".project")) {
+            var templatePath = serverRoot + "/src/extensions/default/tizen/WebProject/",
+                replaceProjectName = function (file) {
+                    fs.readFile(file, "ascii", function (err, data) {
+                        fs.writeFile(file,
+                            data.replace(/#PROJECT_NAME#/g,
+                                projectRoot.name),
+                            "ascii");
+                    });
+                },
+                copyTemplateFile = function (file, replaceName) {
+                    fs.createReadStream(templatePath + file)
+                        .on('end', function () {
+                            if (replaceName)
+                                replaceProjectName(projectPath + file);
+                        })
+                        .pipe(fs.createWriteStream(projectPath + file));
+                };
+            copyTemplateFile(".project", true);
+        }
+        console.log("Starting project:" + projectPath + ". projectId:" + projectInfo.projectId);
+        callback && callback(projectInfo.projectId);
+        child_process.exec("web-packaging", function (err, stdout, stderr) {
+            console.log(stdout);
+            console.log(stderr);
+            _execDeviceCommand("shell mdkir -p " + projectInfo.TEST_WIDGETS_DIR, function () {
+                _execDeviceCommand("push " + pkgName + " "+ projectInfo.tmpPkg, function(err, stdout, stderr) {
+                    process.chdir(cwd);
+                    console.log(stdout);
                     console.log(stderr);
-                    stdout.split("\n").forEach (function (line) {
-                        console.log("line:" + line);
-                        if (line.indexOf("port:") !== -1) {
-                            var port = line.split(" ")[1];
-                            console.log("got port:" + port);
-                            console.log("setting up forward " + port);
-                            _execDeviceCommand("forward tcp:" + port + " tcp:" +
-                                port, function() {
-                                console.log("getting debug url:" + port);
-                                everyone.now.setDebuggingPort(port);
-                            });
-                        }
-                    })
+                    var env = "";
+                    for (var prop in projectInfo)
+                        env += prop + "=" + projectInfo[prop] + ";"
+                    _execDeviceCommand("shell '" + env
+                        + deploy_scripts + "'", function (err, stdout, stderr) {
+                        console.log(stderr);
+                        stdout.split("\n").forEach (function (line) {
+                            console.log("line:" + line);
+                            if (line.indexOf("port:") !== -1) {
+                                var port = line.split(" ")[1];
+                                console.log("got port:" + port);
+                                console.log("setting up forward " + port);
+                                _execDeviceCommand("forward tcp:" + port + " tcp:" +
+                                    port, function() {
+                                    console.log("getting debug url:" + port);
+                                    everyone.now.setDebuggingPort(port);
+                                });
+                            }
+                        })
+                    });
                 });
             });
-        });
-    })
+        })
+    }
 };
