@@ -328,7 +328,9 @@ function OpenLiveBrowser(callback, url, enableRemoteDebugging){
                     });
                     callback(0,0);
                 }
-                now.startProject(window.device.split(":")[1], ProjectManager.getProjectRoot(), ProjectManager.getProjectId());
+                now.startProject(window.device.split(":")[1], ProjectManager.getProjectRoot(), function (projectId) {
+                    ProjectManager.setProjectId(projectId);
+                });
             });
         });
         return;

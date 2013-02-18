@@ -112,8 +112,8 @@ define(function main(require, exports, module) {
                     Strings.LIVE_DEVELOPMENT_INFO_TITLE,
                     Strings.LIVE_DEVELOPMENT_INFO_MESSAGE
                 ).done(function (id) {
-                    LiveDevelopment.open.apply(LiveDevelopment, arguments);
-                });
+                    LiveDevelopment.open.apply(LiveDevelopment, this);
+                }.bind(arguments));
             } else {
                 LiveDevelopment.open.apply(LiveDevelopment, arguments);
             }
