@@ -165,10 +165,16 @@ $.extend(true, brackets.fs, nodeFs , {
         }
     },
     makedir: function (path, permissions, callback ) {
-        if(nodeFs)
-            nodeFs.mkdir(path, callback);
-        else {
-            callback(brackets.fs.ERR_CANT_WRITE);
+        if (!dropboxHandler(path, function (path, dropbox) {
+            dropbox.mkdir(path, function (err, stat) {
+                callback && callback(_dropboxErrorToBracketsError(err));
+            });
+        })) {
+            if(nodeFs)
+                nodeFs.mkdir(path, callback);
+            else {
+                callback(brackets.fs.ERR_CANT_WRITE);
+            }
         }
     },
     readFile: function (path, encoding, callback ) {
