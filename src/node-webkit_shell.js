@@ -12,19 +12,28 @@ var os = require('os');
 var upDate = new Date();
 function getDropbox(callback) {
     if (!window.dropbox) {
+            var Dialogs             = require("widgets/Dialogs");
             var dropboxOAuthDriver = $.extend({}, new Dropbox.Drivers.Redirect ({rememberUser: true}), {
                 //url: function() { return ""; },
                 url: function() { return "";},
                 doAuthorize: function(authUrl, token, tokenSecret, callback) {
-                    var w = window.open(authUrl);
-                    // Hack to find out when the dropbox authorization window was closed
-                    // (check every 500ms to see if it's still there)
-                    var timer =  setInterval(function() {
-                        if (w.closed) {
-                            clearInterval(timer);
-                            callback(token);
-                        }
-                    }, 500);
+                    var $dlg = $("." + Dialogs.DIALOG_ID_INFO + ".template")
+                        .clone()
+                        .removeClass("template")
+                        .addClass("instance")
+                        .appendTo(window.document.body);
+                    $(".dialog-title", $dlg).html("Welcome to use Dropbox as your project storage");
+                    $(".dialog-message", $dlg).html("A new window will be opened for Dropbox now. Please login and click 'Allow' to allow us to use your dropbox as a project storage. Don't forget to close the window after allowing");
+                    $dlg.one("click", ".dialog-button", function (e) {
+                        $dlg.modal(true).hide();
+                        var w = window.showModalDialog(authUrl, null, "dialogWidth:950; dialogHeight:550;dialogLeft:300");
+                        callback(token);
+                    });
+                    $dlg.modal({
+                        backdrop: "static",
+                        show: true,
+                        keyboard: true
+                    });
                 }
             });
 
