@@ -558,6 +558,7 @@ define(function LiveDevelopment(require, exports, module) {
             var url = doc.root.url;
 
             _setStatus(STATUS_CONNECTING);
+            OpenBrowserWindowIfNeeded(url);
             Inspector.connectToURL(url, useDevTool).done(result.resolve).fail(function onConnectFail(err) {
                 if (err === "CANCEL") {
                     result.reject(err);

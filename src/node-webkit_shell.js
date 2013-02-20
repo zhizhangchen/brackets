@@ -270,6 +270,14 @@ function DeleteFileOrDirectory(){
 function GetElapsedMilliseconds(){
     return new Date().getTime() - upDate.getTime() ;
 }
+function OpenBrowserWindowIfNeeded(url){
+    if (window.device === "Simulator" && (!liveBrowser || !liveBrowser.onbeforeunload)) {
+        liveBrowser = window.open(url, "Simulator", "toolbar=no,status=no,directories=no,location=no,titlebar=no");
+        liveBrowser.onbeforeunload = function () {
+            liveBrowser = null;
+        };
+    }
+}
 function OpenLiveBrowser(callback, url, enableRemoteDebugging){
     // enableRemoteDebugging flag is ignored on mac
     var NativeFileSystem = require("file/NativeFileSystem").NativeFileSystem;
@@ -412,7 +420,7 @@ function OpenLiveBrowser(callback, url, enableRemoteDebugging){
         var nwWindow;
         var simulatorPath, questionMarkIndex;
         if (!gui) {
-            window.open(url);
+            OpenBrowserWindowIfNeeded(url);
             this( 0 , 1);
             return;
         }
