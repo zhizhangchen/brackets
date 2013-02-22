@@ -109,8 +109,21 @@ $.extend(true, brackets.fs, nodeFs , {
                     type: "HEAD",
                     dataType: "html",
                     error: function( jqXHR, textStatus, errorThrown) {
-                        console.warn("stat " + path + " " + textStatus + ": " + errorThrown);
-                        this.callback(brackets.fs.ERR_NOT_FOUND);
+                        if (jqXHR.status === 403) {
+                            this.callback(brackets.fs.NO_ERROR, {
+                                isDirectory: function () {
+                                    return true;
+                                },
+                                isFile: function () {
+                                    return false;
+                                },
+                                mtime: new Date()
+                            });
+                        }
+                        else {
+                            console.warn("stat " + path + " " + textStatus + ": " + errorThrown);
+                            this.callback(brackets.fs.ERR_NOT_FOUND);
+                        }
                     }.bind({path: path, callback:callback}),
                     success: function(data, textStatus, jqXHR){
                         this(brackets.fs.NO_ERROR, {
@@ -137,7 +150,7 @@ $.extend(true, brackets.fs, nodeFs , {
                 nodeFs.readdir(path, callback);
             else {
                 $.ajax({
-                    url: path,
+                    url: path + "/manifest.json",
                     dataType: 'json',
                     data: '{}',
                     headers: {
