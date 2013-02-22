@@ -66,19 +66,19 @@ define(function (require, exports, module) {
                 'notification']
         };
 
-        function _inject(module) {
+        function _inject(mod) {
             var relPath, apiUrl;
 
-            relPath = 'apis/' + platform + '/' + module + '.json';
+            relPath = 'apis/' + platform + '/' + mod+ '.json';
             apiUrl = brackets.getModule("utils/ExtensionUtils")
                                 .getModuleUrl(module, relPath);
 
             $.getJSON(apiUrl, function (apiObj) {
-                if (platform === module) {
+                if (platform === mod) {
                     window[platform] = apiObj;
                     return;
                 } else if (window[platform]) {
-                    window[platform][module] = apiObj;
+                    window[platform][mod] = apiObj;
                 }
             });
         }
