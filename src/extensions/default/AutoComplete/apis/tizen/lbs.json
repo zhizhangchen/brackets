@@ -1,0 +1,6 @@
+{
+    "geocoder": {
+        "getDefaultProvider": {},
+        "getProviders": {}
+    }
+}

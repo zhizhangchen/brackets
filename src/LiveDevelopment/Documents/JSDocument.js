@@ -92,9 +92,13 @@ define(function JSDocumentModule(require, exports, module) {
 
     /** Triggered on change by the editor */
     JSDocument.prototype.onChange = function onChange(event, editor, change) {
-        var src = this.doc.getText();
+        // The remote debug engine will not work well without original line endings
+        var src = this.doc.getText(true);
         Inspector.Debugger.setScriptSource(this.script().scriptId, src, function onSetScriptSource(res) {
-            Inspector.Runtime.evaluate("if($)$(\"canvas\").each(function(i,e){if(e.rerender)e.rerender()})");
+            $.each(ScriptAgent.contextIdsForScript(this.script().scriptId), function (i, contextId) {
+                Inspector.Runtime.evaluate("if($)$(\"canvas\").each(function(i,e){if(e.rerender)e.rerender()})",
+                    "",false, false, contextId);
+            });
         }.bind(this));
     };
 
@@ -104,7 +108,7 @@ define(function JSDocumentModule(require, exports, module) {
         var codeMirror = this.editor._codeMirror;
         var i;
         for (i in this._highlight) {
-            codeMirror.setLineClass(this._highlight[i]);
+            codeMirror.removeLineClass(this._highlight[i], "wrap", "highlight");
         }
         this._highlight = [];
         if (!node || !node.trace) {
@@ -118,7 +122,7 @@ define(function JSDocumentModule(require, exports, module) {
             callFrame = node.trace[i];
             if (callFrame.location && callFrame.location.scriptId === scriptId) {
                 line = callFrame.location.lineNumber;
-                codeMirror.setLineClass(line, "highlight");
+                codeMirror.addLineClass(line, "wrap", "highlight");
                 this._highlight.push(line);
             }
         }

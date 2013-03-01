@@ -53,7 +53,7 @@ define(function main(require, exports, module) {
     var prefs;
     var params = new UrlParams();
     var config = {
-        experimental: false, // enable experimental features
+        experimental: true, // enable experimental features
         debug: true, // enable debug output and helpers
         autoconnect: false, // go live automatically after startup?
         highlight: true, // enable highlighting?
@@ -75,21 +75,6 @@ define(function main(require, exports, module) {
 
     var _$btnGoLive; // reference to the GoLive button
     var _$btnHighlight; // reference to the HighlightButton
-
-    /** Load Live Development LESS Style */
-    function _loadStyles() {
-        var request = new XMLHttpRequest();
-        request.open("GET", "LiveDevelopment/main.less", true);
-        request.onload = function onLoad(event) {
-            var parser = new less.Parser();
-            parser.parse(request.responseText, function onParse(err, tree) {
-                console.assert(!err, err);
-                $("<style>" + tree.toCSS() + "</style>")
-                    .appendTo(window.document.head);
-            });
-        };
-        request.send(null);
-    }
 
     /**
      * Change the appearance of a button. Omit text to remove any extra text; omit style to return to default styling;
@@ -127,10 +112,10 @@ define(function main(require, exports, module) {
                     Strings.LIVE_DEVELOPMENT_INFO_TITLE,
                     Strings.LIVE_DEVELOPMENT_INFO_MESSAGE
                 ).done(function (id) {
-                    LiveDevelopment.open();
-                });
+                    LiveDevelopment.open.apply(LiveDevelopment, this);
+                }.bind(arguments));
             } else {
-                LiveDevelopment.open();
+                LiveDevelopment.open.apply(LiveDevelopment, arguments);
             }
         }
     }
@@ -193,7 +178,7 @@ define(function main(require, exports, module) {
 
         Inspector.init(config);
         LiveDevelopment.init(config);
-        _loadStyles();
+        require("utils/ExtensionUtils").loadStyleSheet(module, "main.less");
         _setupGoLiveButton();
         _setupGoLiveMenu();
 

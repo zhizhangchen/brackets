@@ -117,6 +117,24 @@ define(function LiveDevelopment(require, exports, module) {
     var _liveDocument; // the document open for live editing.
     var _relatedDocuments; // CSS and JS documents that are used by the live HTML document
 
+    var _urlWrappers = [];
+    var _urlMappers = [];
+    var _closeScript;
+    var _useDevTool;
+    function addUrlWrapper(wrapper) {
+        _urlWrappers.push(wrapper);
+    }
+    function addUrlMapper(mapper) {
+        _urlMappers.push(mapper);
+    }
+    function removeUrlMapper(mapper) {
+        var index = _urlMappers.indexOf(mapper);
+        if (index !== -1)
+            _urlMappers.splice(index, 1);
+    }
+    function setCloseScript(script) {
+        _closeScript = script;
+    }
     function _isHtmlFileExt(ext) {
         return (FileUtils.isStaticHtmlFileExt(ext) ||
                 (ProjectManager.getBaseUrl() && FileUtils.isServerHtmlFileExt(ext)));
@@ -124,7 +142,7 @@ define(function LiveDevelopment(require, exports, module) {
 
     /** Convert a URL to a local full file path */
     function _urlToPath(url) {
-        var path,
+        var path = url,
             baseUrl = ProjectManager.getBaseUrl();
 
         if (baseUrl !== "" && url.indexOf(baseUrl) === 0) {
@@ -135,7 +153,7 @@ define(function LiveDevelopment(require, exports, module) {
         } else if (url.indexOf("file://") === 0) {
             // Convert a file URL to local file path
             path = url.slice(7);
-            if (path && brackets.platform === "win" && path.charAt(0) === "/") {
+            if (path && !brackets.inBrowser && brackets.platform === "win" && path.charAt(0) === "/") {
                 path = path.slice(1);
             }
         }
@@ -155,9 +173,9 @@ define(function LiveDevelopment(require, exports, module) {
             url = encodedDocPath.replace(encodedProjectPath, baseUrl);
 
         } else {
-            var prefix = "file://";
+            var prefix = location.origin;
     
-            if (brackets.platform === "win") {
+            if (brackets.platform === "win" &&  path.charAt(0) !== "/") {
                 // The path on Windows starts with a drive letter (e.g. "C:").
                 // In order to make it a valid file: URL we need to add an
                 // additional slash to the prefix.
@@ -166,6 +184,10 @@ define(function LiveDevelopment(require, exports, module) {
     
             url = encodeURI(prefix + path);
         }
+        _urlMappers.forEach(function (mapper) {
+            url = mapper(url);
+        })
+
 
         return url;
     }
@@ -284,7 +306,12 @@ define(function LiveDevelopment(require, exports, module) {
     function _createDocument(doc, editor) {
         var DocClass = _classForDocument(doc);
         if (DocClass) {
-            return new DocClass(doc, editor);
+             try {
+                 return new DocClass(doc, editor);
+             }catch (e) {
+                 console.warn("create document problem:" + doc);
+                 return null;
+             }
         } else {
             return null;
         }
@@ -294,13 +321,17 @@ define(function LiveDevelopment(require, exports, module) {
      * @param {Document} source document to open
      */
     function _openDocument(doc, editor) {
+        var relatedURLs;
         _closeDocument();
         _liveDocument = _createDocument(doc, editor);
 
         // Gather related CSS documents.
-        // FUTURE: Gather related JS documents as well.
         _relatedDocuments = [];
-        agents.css.getStylesheetURLs().forEach(function (url) {
+        relatedURLs = agents.css.getStylesheetURLs();
+        if (exports.config.experimental)
+            // Gather related JS documents.
+            relatedURLs = $.merge([], relatedURLs, agents.script.getScriptURLs());
+        relatedURLs.forEach(function (url) {
             // FUTURE: when we get truly async file handling, we might need to prevent other
             // stuff from happening while we wait to add these listeners
             DocumentManager.getDocumentForPath(_urlToPath(url))
@@ -380,8 +411,8 @@ define(function LiveDevelopment(require, exports, module) {
         var message;
         
         // Sometimes error.message is undefined
-        if (!error.message) {
-            console.warn("Expected a non-empty string in error.message, got this instead:", error.message);
+        if (!error || !error.message) {
+            console.warn("Expected a non-empty string in error.message, got this instead:", error?error.message:null);
             message = JSON.stringify(error);
         } else {
             message = error.message;
@@ -393,7 +424,7 @@ define(function LiveDevelopment(require, exports, module) {
         }
 
         // Additional information, like exactly which parameter could not be processed.
-        var data = error.data;
+        var data = error?error.data:null;
         if (Array.isArray(data)) {
             message += "\n" + data.join("\n");
         }
@@ -429,6 +460,10 @@ define(function LiveDevelopment(require, exports, module) {
 
     /** Triggered by Inspector.connect */
     function _onConnect(event) {
+        if (_useDevTool) {
+            _onLoad();
+            return;
+        }
         $(Inspector.Inspector).on("detached", _onDetached);
         
         // Load agents
@@ -439,7 +474,8 @@ define(function LiveDevelopment(require, exports, module) {
         // Load the right document (some agents are waiting for the page's load event)
         var doc = _getCurrentDocument();
         if (doc) {
-            Inspector.Page.navigate(doc.root.url);
+            //Inspector.Page.navigate(doc.root.url);
+            Inspector.Page.reload();
         } else {
             Inspector.Page.reload();
         }
@@ -461,13 +497,23 @@ define(function LiveDevelopment(require, exports, module) {
     }
 
     /** Open the Connection and go live */
-    function open() {
+    function open(useDevTool) {
         var result = new $.Deferred(),
             promise = result.promise();
         var doc = _getCurrentDocument();
+        var argUrl = doc.root.url;
+        var url;
         var browserStarted = false;
         var retryCount = 0;
+        _urlWrappers.forEach(function (wrapper) {
+            argUrl = wrapper(argUrl);
+        })
+        url = argUrl.split(" ");
+        _useDevTool = useDevTool;
 
+        url = url[url.length - 1].split('-app=');
+        url = url[url.length - 1];
+        doc.root.url = url;
         function showWrongDocError() {
             Dialogs.showModalDialog(
                 Dialogs.DIALOG_ID_ERROR,
@@ -512,7 +558,8 @@ define(function LiveDevelopment(require, exports, module) {
             var url = doc.root.url;
 
             _setStatus(STATUS_CONNECTING);
-            Inspector.connectToURL(url).done(result.resolve).fail(function onConnectFail(err) {
+            OpenBrowserWindowIfNeeded(url);
+            Inspector.connectToURL(url, useDevTool).done(result.resolve).fail(function onConnectFail(err) {
                 if (err === "CANCEL") {
                     result.reject(err);
                     return;
@@ -549,7 +596,7 @@ define(function LiveDevelopment(require, exports, module) {
                 retryCount++;
 
                 if (!browserStarted && exports.status !== STATUS_ERROR) {
-                    url = launcherUrl + "?" + encodeURIComponent(url);
+                    //url = launcherUrl + "?" + encodeURIComponent(url);
 
                     // If err === FileError.ERR_NOT_FOUND, it means a remote debugger connection
                     // is available, but the requested URL is not loaded in the browser. In that
@@ -558,11 +605,16 @@ define(function LiveDevelopment(require, exports, module) {
                     // on Windows where Chrome can't be opened more than once with the
                     // --remote-debugging-port flag set.
                     NativeApp.openLiveBrowser(
-                        url,
+                        argUrl,
                         err !== NativeFileError.ERR_NOT_FOUND
                     )
                         .done(function () {
                             browserStarted = true;
+                if (exports.status !== STATUS_ERROR) {
+                    window.setTimeout(function retryConnect() {
+                        Inspector.connectToURL(url, useDevTool).then(result.resolve, onConnectFail);
+                    }, 100);
+                }
                         })
                         .fail(function (err) {
                             var message;
@@ -588,10 +640,9 @@ define(function LiveDevelopment(require, exports, module) {
                             result.reject("OPEN_LIVE_BROWSER");
                         });
                 }
-                    
-                if (exports.status !== STATUS_ERROR) {
+                else if (exports.status !== STATUS_ERROR) {
                     window.setTimeout(function retryConnect() {
-                        Inspector.connectToURL(url).done(result.resolve).fail(onConnectFail);
+                        Inspector.connectToURL(url, useDevTool).done(result.resolve).fail(onConnectFail);
                     }, 500);
                 }
             });
@@ -602,9 +653,7 @@ define(function LiveDevelopment(require, exports, module) {
 
     /** Close the Connection */
     function close() {
-        if (Inspector.connected()) {
-            Inspector.Runtime.evaluate("window.open('', '_self').close();");
-        }
+        NativeApp.closeLiveBrowser();
         Inspector.disconnect();
         _setStatus(STATUS_INACTIVE);
     }
@@ -628,7 +677,7 @@ define(function LiveDevelopment(require, exports, module) {
     /** Redraw highlights **/
     function redrawHighlight() {
         if (Inspector.connected() && agents.highlight) {
-            agents.highlight.redraw();
+            //agents.highlight.redraw();
         }
     }
 
@@ -647,9 +696,9 @@ define(function LiveDevelopment(require, exports, module) {
                 var editor = EditorManager.getCurrentFullEditor();
                 _openDocument(doc, editor);
             } else {
-                if (exports.config.experimental || _isHtmlFileExt(doc.extension)) {
+                if (_isHtmlFileExt(doc.extension)) {
                     close();
-                    window.setTimeout(open);
+                    window.setTimeout(open, 300);
                 }
             }
             
@@ -664,6 +713,7 @@ define(function LiveDevelopment(require, exports, module) {
     function _onDocumentSaved(event, doc) {
         if (doc && Inspector.connected() && _classForDocument(doc) !== CSSDocument &&
                 agents.network && agents.network.wasURLRequested(doc.url)) {
+            $(exports).triggerHandler("liveHTMLSaved", doc);
             // Reload HTML page
             Inspector.Page.reload();
 
@@ -706,5 +756,9 @@ define(function LiveDevelopment(require, exports, module) {
     exports.showHighlight       = showHighlight;
     exports.hideHighlight       = hideHighlight;
     exports.redrawHighlight     = redrawHighlight;
+    exports.addUrlWrapper       = addUrlWrapper;
+    exports.addUrlMapper        = addUrlMapper;
+    exports.removeUrlMapper     = removeUrlMapper;
+    exports.setCloseScript       = setCloseScript;
     exports.init                = init;
 });

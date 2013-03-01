@@ -101,6 +101,7 @@ define(function (require, exports, module) {
     require("help/HelpCommandHandlers");
     require("search/FindInFiles");
     require("search/FindReplace");
+    require("extensions/default/dropbox/dropbox");
     
     PerfUtils.addMeasurement("brackets module dependencies resolved");
 
@@ -156,7 +157,7 @@ define(function (require, exports, module) {
         EditorManager.setEditorHolder($("#editor-holder"));
 
         // Let the user know Brackets doesn't run in a web browser yet
-        if (brackets.inBrowser) {
+        if (!brackets.fs) {
             Dialogs.showModalDialog(
                 Dialogs.DIALOG_ID_ERROR,
                 Strings.ERROR_IN_BROWSER_TITLE,
@@ -218,6 +219,15 @@ define(function (require, exports, module) {
                     
                     PerfUtils.addMeasurement("Application Startup");
                 });
+                
+                // See if any startup files were passed to the application
+                if (brackets.app.getPendingFilesToOpen) {
+                    brackets.app.getPendingFilesToOpen(function (err, files) {
+                        files.forEach(function (filename) {
+                            CommandManager.execute(Commands.FILE_OPEN, { fullPath: filename });
+                        });
+                    });
+                }
             });
         });
         
@@ -286,6 +296,7 @@ define(function (require, exports, module) {
                     $target.is("input[type=number]") ||
                     $target.is("input[type=password]") ||
                     $target.is("input:not([type])") || // input with no type attribute defaults to text
+                    $target.is("select") ||
                     $target.is("textarea");
     
             if (!isTextField) {

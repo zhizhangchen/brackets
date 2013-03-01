@@ -1,0 +1,11 @@
+{
+    "PERIOD_MINUTE": 60,
+    "PERIOD_HOUR": 3600,
+    "PERIOD_DAY": 86400,
+    "PERIOD_WEEK": 604800,
+    "add": {},
+    "remove": {},
+    "removeAll": {},
+    "get": {},
+    "getAll": {}
+}

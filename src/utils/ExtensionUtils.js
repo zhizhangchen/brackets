@@ -111,9 +111,9 @@ define(function (require, exports, module) {
      * @return {!string} The path to the module's folder
      **/
     function getModulePath(module, path) {
-        var modulePath = module.uri.substr(0, module.uri.lastIndexOf("/") + 1);
+        var modulePath = require("file/FileUtils").getNativeModuleDirectoryPath(module);
         if (path) {
-            modulePath += path;
+            modulePath += ("/" + path);
         }
         
         return modulePath;
@@ -134,8 +134,10 @@ define(function (require, exports, module) {
         // but *doesn't* work if it is prepended with "file://". Go figure.
         // However, the prefix "file://localhost" does work.
         if (brackets.platform === "win" && url.indexOf(":") !== -1) {
-            url = "file:///" + url;
+            url = location.origin + "/" + url;
         }
+        else
+            url = location.origin + url;
         
         return url;
     }

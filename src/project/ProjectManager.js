@@ -124,6 +124,7 @@ define(function (require, exports, module) {
      * @ see getBaseUrl(), setBaseUrl()
      */
     var _projectBaseUrl = "";
+    var _projectId  = "";
 
     /**
      * Unique PreferencesManager clientID
@@ -241,6 +242,14 @@ define(function (require, exports, module) {
      */
     function getBaseUrl() {
         return _projectBaseUrl;
+    }
+
+    function getProjectId() {
+        return _projectId;
+    }
+
+    function setProjectId(projectId) {
+        return _projectId = projectId;
     }
 
     /**
@@ -493,7 +502,7 @@ define(function (require, exports, module) {
                         // select the current document if it becomes visible when this folder is opened
                         var curDoc = DocumentManager.getCurrentDocument();
                         
-                        if (_hasFileSelectionFocus() && curDoc) {
+                        if (_hasFileSelectionFocus() && curDoc && data) {
                             var entry = data.rslt.obj.data("entry");
                             
                             if (curDoc.file.fullPath.indexOf(entry.fullPath) === 0) {
@@ -761,7 +770,7 @@ define(function (require, exports, module) {
         _projectInitialLoad.previous = _prefs.getValue(_getTreeStateKey(rootPath)) || [];
 
         // Populate file tree as long as we aren't running in the browser
-        if (!brackets.inBrowser) {
+        if (brackets.fs) {
             // Point at a real folder structure on local disk
             NativeFileSystem.requestNativeFileSystem(rootPath,
                 function (fs) {
@@ -776,6 +785,9 @@ define(function (require, exports, module) {
 
                     _projectRoot = rootEntry;
                     _projectBaseUrl = _prefs.getValue(_getBaseUrlKey()) || "";
+                    DocumentManager.getDocumentForPath(_projectRoot.fullPath + "config.xml").done(function (configFile) {
+                        _projectId = $(configFile.getText()).find("tizen\\:application").attr('id');
+                    });
 
                     // If this is the current welcome project, record it. In future launches, we always 
                     // want to substitute the welcome project for the current build instead of using an
@@ -1375,6 +1387,8 @@ define(function (require, exports, module) {
     exports.getProjectRoot           = getProjectRoot;
     exports.getBaseUrl               = getBaseUrl;
     exports.setBaseUrl               = setBaseUrl;
+    exports.getProjectId             = getProjectId;
+    exports.setProjectId             = setProjectId;
     exports.isWithinProject          = isWithinProject;
     exports.makeProjectRelativeIfPossible = makeProjectRelativeIfPossible;
     exports.shouldShow               = shouldShow;
