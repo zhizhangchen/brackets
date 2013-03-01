@@ -171,7 +171,7 @@ define(function CSSDocumentModule(require, exports, module) {
         // brute force: update the CSS
         CSSAgent.reloadCSSForDocument(this.doc);
         if (Inspector.config.highlight) {
-            HighlightAgent.redraw();
+            //HighlightAgent.redraw();
         }
     };
     /** Triggered if the Document's file is deleted */
@@ -215,7 +215,7 @@ define(function CSSDocumentModule(require, exports, module) {
                 if (rule.ruleId && rule.ruleId.styleSheetId === this.styleSheet.styleSheetId) {
                     from = codeMirror.posFromIndex(rule.selectorRange.start);
                     to = codeMirror.posFromIndex(rule.style.range.end);
-                    this._highlight.push(codeMirror.markText(from, to, "highlight"));
+                    this._highlight.push(codeMirror.markText(from, to, { className: "highlight" }));
                 }
             }
         }.bind(this));

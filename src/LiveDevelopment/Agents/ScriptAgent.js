@@ -38,6 +38,9 @@ define(function ScriptAgent(require, exports, module) {
     var _load; // the load promise
     var _urlToScript; // url -> script info
     var _idToScript; // id -> script info
+    var _frameToContextIds; // frame id -> context ids
+    var _idToContextIds; // id -> context ids
+    var _idToFrames; // id -> frame ids
     var _insertTrace; // the last recorded trace of a DOM insertion
 
     /** Add a call stack trace to a node
@@ -64,12 +67,35 @@ define(function ScriptAgent(require, exports, module) {
     function scriptForURL(url) {
         return _urlToScript[url];
     }
+    function contextIdsForScript(scriptId) {
+        var contextIds = [];
+        $.each(_idToFrames[scriptId], function (i, frameId) {
+            $.merge(contextIds, _frameToContextIds[frameId]);
+        });
+        return contextIds;
+    }
+
+    /** Get a list of all loaded script files*/
+    function getScriptURLs() {
+        var urls = [], url;
+        for (url in _urlToScript) {
+            if (_urlToScript.hasOwnProperty(url)) {
+                urls.push(url);
+            }
+        }
+        return urls;
+    }
 
     // DOMAgent Event: Document root loaded
     function _onGetDocument(event, res) {
-        Inspector.DOMDebugger.setDOMBreakpoint(res.root.nodeId, "subtree-modified");
         _load.resolve();
     }
+    function _onContextCreated(event, res) {
+        var contextIds = (_frameToContextIds[res.context.frameId] = _frameToContextIds[res.context.frameId] || []);
+        if (contextIds.indexOf(res.context.id) === -1)
+            contextIds.push(res.context.id);
+    }
+
 
     // WebInspector Event: DOM.childNodeInserted
     function _onChildNodeInserted(event, res) {
@@ -80,13 +106,35 @@ define(function ScriptAgent(require, exports, module) {
             _insertTrace = undefined;
         }
     }
+    function _onLoadingFinished(event, res) {
+            Inspector.Page.getResourceTree(function onResourceTree(res) {
+                var mapIdToFrames = function (frame) {
+                    $.each(frame.resources, function (k, resource) {
+                        var script = _urlToScript[resource.url];
+                        var frames;
+                        if (script) {
+                            frames = _idToFrames[script.scriptId] = _idToFrames[script.scriptId] || [];
+                            if (frames.indexOf(frame.frame.id) === -1)
+                                frames.push(frame.frame.id);
+                        }
+                    });
+                    if (frame.childFrames)
+                        $.each(frame.childFrames, function (j, childFrame) {
+                            mapIdToFrames(childFrame);
+                        })
+                };
+                mapIdToFrames(res.frameTree);
+            });
+    }
 
     // TODO: Strip off query/hash strings from URL (see CSSAgent._canonicalize())
     // WebInspector Event: Debugger.scriptParsed
     function _onScriptParsed(event, res) {
         // res = {scriptId, url, startLine, startColumn, endLine, endColumn, isContentScript, sourceMapURL}
         _idToScript[res.scriptId] = res;
-        _urlToScript[res.url] = res;
+        if (res.url) {
+            _urlToScript[res.url] = res;
+        }
     }
 
     // WebInspector Event: Debugger.scriptFailedToParse
@@ -121,15 +169,27 @@ define(function ScriptAgent(require, exports, module) {
     function load() {
         _urlToScript = {};
         _idToScript = {};
+        _idToFrames = {};
+        _frameToContextIds = {};
         _load = new $.Deferred();
         Inspector.Debugger.enable();
         Inspector.Debugger.setPauseOnExceptions("uncaught");
         $(DOMAgent).on("getDocument.ScriptAgent", _onGetDocument);
+        if (Inspector.Runtime.setReportExecutionContextCreation) {
+            Inspector.Runtime.setReportExecutionContextCreation(true);
+            $(Inspector.Runtime).on("isolatedContextCreated.ScriptAgent", _onContextCreated);
+            $(Inspector.Runtime).on("executionContextCreated.ScriptAgent", _onContextCreated);
+        }
+        else {
+            Inspector.Runtime.enable();
+            $(Inspector.Runtime).on("executionContextCreated.ScriptAgent", _onContextCreated);
+        }
         $(Inspector.Debugger)
             .on("scriptParsed.ScriptAgent", _onScriptParsed)
             .on("scriptFailedToParse.ScriptAgent", _onScriptFailedToParse)
             .on("paused.ScriptAgent", _onPaused);
         $(Inspector.DOM).on("childNodeInserted.ScriptAgent", _onChildNodeInserted);
+        $(Inspector.Network).on("loadingFinished.ScriptAgent", _onLoadingFinished);
         return _load;
     }
 
@@ -138,11 +198,14 @@ define(function ScriptAgent(require, exports, module) {
         $(DOMAgent).off(".ScriptAgent");
         $(Inspector.Debugger).off(".ScriptAgent");
         $(Inspector.DOM).off(".ScriptAgent");
+        $(Inspector.Runtime).off(".ScriptAgent");
     }
 
     // Export public functions
     exports.scriptWithId = scriptWithId;
     exports.scriptForURL = scriptForURL;
+    exports.contextIdsForScript = contextIdsForScript;
+    exports.getScriptURLs = getScriptURLs;
     exports.load = load;
     exports.unload = unload;
 });

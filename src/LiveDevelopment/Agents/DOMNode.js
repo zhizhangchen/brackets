@@ -116,6 +116,9 @@ define(function DOMNodeModule(require, exports, module) {
     DOMNode.prototype.setPayload = function setPayload(payload) {
         this.nodeId = payload.nodeId;
         this.type = payload.nodeType;
+        if (payload.contentDocument) {
+            this.appendChild(new DOMNode(this.agent, payload.contentDocument));
+        }
         if (payload.nodeName) {
             this.name = payload.nodeName;
         }
