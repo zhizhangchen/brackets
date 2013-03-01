@@ -341,6 +341,12 @@ function OpenLiveBrowser(callback, url, enableRemoteDebugging){
                                 Inspector.disconnect();
                             }
                         })
+                        .dialogExtend({
+                            "close" : true,
+                            "maximize" : true,
+                            "minimize" : true,
+                            "dblclick": "collapse"
+                        });
                 $(Inspector).off('connect.RemoteEmulator');
                 $(Inspector).on('connect.RemoteEmulator', function () {
                     this.dialog("open");
