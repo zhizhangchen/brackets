@@ -1,5 +1,4 @@
-/*
- * The MIT License (MIT)
+T License (MIT)
  * Copyright (c) 2012 Intel Corporation. All rights reserved.
  * 
  * Permission is hereby granted, free of charge, to any person obtaining a
@@ -36,9 +35,9 @@ define(function (require, exports, module) {
      * Load CodeMirror2 utilities
      */
     function _getCodeMirrorModule() {
-        require("../../../thirdparty/CodeMirror2/addon/hint/javascript-hint");
-        require("../../../thirdparty/CodeMirror2/addon/hint/simple-hint");
-        brackets.getModule("utils/ExtensionUtils").loadStyleSheet(module, "../../../thirdparty/CodeMirror2/addon/hint/simple-hint.css");
+        require("../../../thirdparty/CodeMirror2/lib/util/javascript-hint");
+        require("../../../thirdparty/CodeMirror2/lib/util/simple-hint");
+        brackets.getModule("utils/ExtensionUtils").loadStyleSheet(module, "../../../thirdparty/CodeMirror2/lib/util/simple-hint.css");
     }
 
     /**
@@ -52,41 +51,37 @@ define(function (require, exports, module) {
         else
             return "file://" + path;
     }
-
+    function _absolutepath(){
+        var absolute_path = FileUtils.getNativeModuleDirectoryPath(module) + "/";
+         return    absolute_path;
+    }
     /**
      * Inject platform namespace and its module APIs 
      */
     function _injectPlatformNamespace() {
-        var platformApis, platform;
-
-        platformApis = {
-            tizen: ['alarm', 'application', 'bluetooth', 'calendar', 'call',
-                'contact', 'filesystem', 'lbs', 'mediacontent', 'messaging',
-                'nfc', 'systeminfo', 'time', 'power', 'download',
-                'notification']
-        };
-
-        function _inject(module) {
-            var relPath, apiUrl;
-
-            relPath = 'apis/' + platform + '/' + module + '.json';
-            apiUrl = brackets.getModule("utils/ExtensionUtils")
-                                .getModuleUrl(module, relPath);
-
-            $.getJSON(apiUrl, function (apiObj) {
-                if (platform === module) {
-                    window[platform] = apiObj;
-                    return;
-                } else if (window[platform]) {
-                    window[platform][module] = apiObj;
-                }
-            });
-        }
-
-        for (platform in platformApis) {
-            _inject(platform);
-            platformApis[platform].forEach(_inject);
-        }
+        brackets.fs.readdir(_absolutepath() + 'apis/', function(err, platforms) {
+            for(var i in platforms){
+                var platform = platforms[i];
+                window[platform] = {};    
+                var platformPath = _absolutepath() + 'apis/' + platform+'/';
+                brackets.fs.readdir(platformPath,function(err, modules) {
+                    for (var j in modules){
+                        var module = modules[j], 
+                            modulePath = _extensionUrl() + 'apis/' + this + '/' + module;
+                        module = module.substring(0, module.lastIndexOf("."));
+                        $.getJSON(modulePath, function (moduleObj) {
+                            var platform = this.platform, module = this.module;
+                            if (platform === module) {
+                                $.extend(window[platform], moduleObj);    
+                                return;
+                            } else if (window[platform]) {
+                                window[platform][module] = moduleObj;
+                            }
+                        }.bind({platform:this, module:module}));
+                    }        
+                }.bind(platform));
+            }
+        });
     }
 
     /**
@@ -140,3 +135,4 @@ define(function (require, exports, module) {
     // Initialize
     load();
 });
+
