@@ -120,7 +120,7 @@ define(function (require, exports, module) {
          * @const
          * @type {number}
          */
-        ASYNC_TIMEOUT: brackets.app.inBrowser ? 50000 : 2000,
+        ASYNC_TIMEOUT: brackets.inBrowser ? 50000 : 2000,
         
         /**
          * Shows a modal dialog for selecting and opening files
