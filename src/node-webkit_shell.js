@@ -333,6 +333,14 @@ function OpenLiveBrowser(callback, url, enableRemoteDebugging){
                 var Inspector = require("LiveDevelopment/Inspector/Inspector");
                 var iframe = $('<iframe id="remoteEmulator" frameborder="0" style="overflow:hidden;width:100%;height:100%" height="100%" width="100%"></iframe>')
                         .attr("src", "http://" + location.hostname + ":" + 6080 + "/vnc.html")
+                        .load(function () {
+                            iframe.contents().find("#noVNC_canvas").click( function() {
+                                iframe[0].contentWindow.focus();
+                            });
+                            $(window).click( function () {
+                                window.focus();
+                            });
+                        })
                 var div = $('<div/>').append(iframe).css("overflow", "hidden")
                         .dialog({width:"550", height:"770", minWidth: "550",
                             minHeight: "770", position:"right",
