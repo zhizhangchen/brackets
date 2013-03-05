@@ -36,9 +36,9 @@ define(function (require, exports, module) {
      * Load CodeMirror2 utilities
      */
     function _getCodeMirrorModule() {
-        require("../../../thirdparty/CodeMirror2/lib/util/javascript-hint");
-        require("../../../thirdparty/CodeMirror2/lib/util/simple-hint");
-        brackets.getModule("utils/ExtensionUtils").loadStyleSheet(module, "../../../thirdparty/CodeMirror2/lib/util/simple-hint.css");
+        require("../../../thirdparty/CodeMirror2/addon/hint/javascript-hint");
+        require("../../../thirdparty/CodeMirror2/addon/hint/simple-hint");
+        brackets.getModule("utils/ExtensionUtils").loadStyleSheet(module, "../../../thirdparty/CodeMirror2/addon/hint/simple-hint.css");
     }
 
     /**
@@ -55,7 +55,7 @@ define(function (require, exports, module) {
     function _absolutepath(){
 	    var absolute_path = FileUtils.getNativeModuleDirectoryPath(module) + "/";
 	     return    absolute_path;
-	}
+    }
     /**
      * Inject platform namespace and its module APIs 
      */
@@ -97,8 +97,9 @@ define(function (require, exports, module) {
         }
 
         cmEditor = curEditor._codeMirror;
-        cmEditor.getOption("extraKeys")["Ctrl-P"] = "autocomplete";
-
+        var extraKeys = cmEditor.getOption("extraKeys");
+        if (extraKeys)
+	    extraKeys["Ctrl-P"] = "autocomplete";
         onKeyEventBase = cmEditor.getOption("onKeyEvent");
         cmEditor.setOption("onKeyEvent", function (cm, ev) {
             if (onKeyEventBase) {
