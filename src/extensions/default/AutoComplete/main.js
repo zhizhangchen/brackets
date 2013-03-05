@@ -52,10 +52,10 @@ define(function (require, exports, module) {
         else
             return "file://" + path;
     }
-    function _absolutepath(){
+	function _absolutepath(){
 	    var absolute_path = FileUtils.getNativeModuleDirectoryPath(module) + "/";
 	     return    absolute_path;
-    }
+	}
     /**
      * Inject platform namespace and its module APIs 
      */
@@ -98,8 +98,9 @@ define(function (require, exports, module) {
 
         cmEditor = curEditor._codeMirror;
         var extraKeys = cmEditor.getOption("extraKeys");
-        if (extraKeys)
-	    extraKeys["Ctrl-P"] = "autocomplete";
+	    if (extraKeys)
+	        extraKeys["Ctrl-P"] = "autocomplete";
+
         onKeyEventBase = cmEditor.getOption("onKeyEvent");
         cmEditor.setOption("onKeyEvent", function (cm, ev) {
             if (onKeyEventBase) {
