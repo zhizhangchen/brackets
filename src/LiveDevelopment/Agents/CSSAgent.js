@@ -90,6 +90,8 @@ define(function CSSAgent(require, exports, module) {
      */
     function reloadCSSForDocument(doc) {
         var style = styleForURL(doc.url);
+        if (!style)
+            return;
         console.assert(style, "Style Sheet for document not loaded: " + doc.url);
         Inspector.CSS.setStyleSheetText(style.styleSheetId, doc.getText(true));
     }
