@@ -148,7 +148,7 @@ everyone.now.startProject = function(device, projectRoot, callback){
         child_process.exec("web-packaging", function (err, stdout, stderr) {
             console.log(stdout);
             console.log(stderr);
-            _execDeviceCommand("shell mdkir -p " + projectInfo.TEST_WIDGETS_DIR, function () {
+            _execDeviceCommand("shell mkdir -p " + projectInfo.TEST_WIDGETS_DIR, function () {
                 _execDeviceCommand("push " + pkgName + " "+ projectInfo.tmpPkg, function(err, stdout, stderr) {
                     process.chdir(cwd);
                     console.log(stdout);
