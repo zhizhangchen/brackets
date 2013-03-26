@@ -341,6 +341,14 @@ function OpenLiveBrowser(callback, url, enableRemoteDebugging){
                                 Inspector.disconnect();
                             }
                         })
+                iframe.load( function () {
+                    iframe.contents().find("#noVNC_canvas").click( function () {
+                        iframe[0].contentWindow.focus();
+                    })
+                    $(window).click(function () {
+                        window.focus();
+                    })
+                })
                 $(Inspector).off('connect.RemoteEmulator');
                 $(Inspector).on('connect.RemoteEmulator', function () {
                     this.dialog("open");
