@@ -36,6 +36,7 @@ define(function CSSAgent(require, exports, module) {
     require("thirdparty/path-utils/path-utils.min");
 
     var Inspector = require("LiveDevelopment/Inspector/Inspector");
+    var DocumentManager = require("document/DocumentManager");
 
     var _load; // {$.Deferred} load promise
     var _urlToStyle; // {url -> loaded} style definition
@@ -51,6 +52,7 @@ define(function CSSAgent(require, exports, module) {
 
     // WebInspector Event: Runtime.loadEventFired
     function _onLoadingFinished(event, res) {
+        var doc = DocumentManager.getCurrentDocument();
         _urlToStyle = {};
         Inspector.CSS.getAllStyleSheets(function onGetAllStyleSheets(res) {
             var i, header;
@@ -59,7 +61,10 @@ define(function CSSAgent(require, exports, module) {
                 _urlToStyle[_canonicalize(header.sourceURL)] = header;
             }
             _load.resolve();
+            if (doc.extension === "css")
+                reloadCSSForDocument(doc);
         });
+
     }
 
     /** Get a style sheet for a url
@@ -85,6 +90,8 @@ define(function CSSAgent(require, exports, module) {
      */
     function reloadCSSForDocument(doc) {
         var style = styleForURL(doc.url);
+        if (!style)
+            return;
         console.assert(style, "Style Sheet for document not loaded: " + doc.url);
         Inspector.CSS.setStyleSheetText(style.styleSheetId, doc.getText(true));
     }
