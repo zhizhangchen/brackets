@@ -53,40 +53,37 @@ define(function (require, exports, module) {
             return "file://" + path;
     }
 
+    function _absolutepath(){
+        var absolute_path = FileUtils.getNativeModuleDirectoryPath(module) + "/";
+         return    absolute_path;
+    }
     /**
      * Inject platform namespace and its module APIs 
      */
     function _injectPlatformNamespace() {
-        var platformApis, platform;
-
-        platformApis = {
-            tizen: ['alarm', 'application', 'bluetooth', 'calendar', 'call',
-                'contact', 'filesystem', 'lbs', 'mediacontent', 'messaging',
-                'nfc', 'systeminfo', 'time', 'power', 'download',
-                'notification']
-        };
-
-        function _inject(module) {
-            var relPath, apiUrl;
-
-            relPath = 'apis/' + platform + '/' + module + '.json';
-            apiUrl = brackets.getModule("utils/ExtensionUtils")
-                                .getModuleUrl(module, relPath);
-
-            $.getJSON(apiUrl, function (apiObj) {
-                if (platform === module) {
-                    window[platform] = apiObj;
-                    return;
-                } else if (window[platform]) {
-                    window[platform][module] = apiObj;
-                }
-            });
-        }
-
-        for (platform in platformApis) {
-            _inject(platform);
-            platformApis[platform].forEach(_inject);
-        }
+        brackets.fs.readdir(_absolutepath() + 'apis/', function(err, platforms) {
+            for(var i in platforms){
+                var platform = platforms[i];
+                window[platform] = {};    
+                var platformPath = _absolutepath() + 'apis/' + platform+'/';
+                brackets.fs.readdir(platformPath,function(err, modules) {
+                    for (var j in modules){
+                        var module = modules[j], 
+                            modulePath = _extensionUrl() + 'apis/' + this + '/' + module;
+                        module = module.substring(0, module.lastIndexOf("."));
+                        $.getJSON(modulePath, function (moduleObj) {
+                            var platform = this.platform, module = this.module;
+                            if (platform === module) {
+                                $.extend(window[platform], moduleObj);    
+                                return;
+                            } else if (window[platform]) {
+                                window[platform][module] = moduleObj;
+                            }
+                        }.bind({platform:this, module:module}));
+                    }        
+                }.bind(platform));
+            }
+        });
     }
 
     /**
@@ -101,7 +98,10 @@ define(function (require, exports, module) {
         }
 
         cmEditor = curEditor._codeMirror;
-        cmEditor.getOption("extraKeys")["Ctrl-P"] = "autocomplete";
+        var extraKeys = cmEditor.getOption("extraKeys");
+
+        if (extraKeys)
+            extraKeys["Ctrl-P"] = "autocomplete";
 
         onKeyEventBase = cmEditor.getOption("onKeyEvent");
         cmEditor.setOption("onKeyEvent", function (cm, ev) {
