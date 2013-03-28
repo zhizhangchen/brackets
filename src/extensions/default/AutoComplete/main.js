@@ -102,6 +102,7 @@ define(function (require, exports, module) {
 
         cmEditor = curEditor._codeMirror;
         var extraKeys = cmEditor.getOption("extraKeys");
+
         if (extraKeys)
             extraKeys["Ctrl-P"] = "autocomplete";
 
