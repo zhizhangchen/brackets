@@ -14,8 +14,8 @@
 	path = src/thirdparty/mustache
 	url = git://github.com/janl/mustache.js.git
 [submodule "src/extensions/default/everyscrub"]
-	path = src/extensions/default/everyscrub
-	url = git://github.com/peterflynn/everyscrub.git
+    path = src/extensions/default/everyscrub
+    url = git://github.com/peterflynn/everyscrub.git
 [submodule "src/extensions/default/dropbox"]
-	path = src/extensions/default/dropbox
-	url = git@github.com:zhizhangchen/brackets-dropbox.git
+    path = src/extensions/default/dropbox
+    url = https://github.com/zhizhangchen/brackets-dropbox.git
