@@ -6,6 +6,12 @@ if (!window.require) {
 var gui = require('nw.gui');
 var child_process = require('child_process');
 var liveBrowser;
+var repo,
+    repoName,
+    userName,
+    dirLocation,
+    branch = "master",
+    githubPrefix = "github://";
 var ports = {};
 var nodeFs = require('fs');
 var os = require('os');
@@ -57,6 +63,20 @@ function dropboxHandler(path, callback) {
     }
     return false;
 }
+function githubHandler(path) {
+    if (path.indexOf("github://") === 0)
+        return true;
+    else
+        return false;
+}
+function isRepo(path) {
+    dirLocation = path.indexOf(repoName)+repoName.length+1;
+    var url = githubPrefix + userName + "/" + repoName;
+    if (url === path || (url + '/') === path)
+        return true;
+    else 
+        return false;
+}
 function _nodeErrorToBracketsError (err) {
     if (!err) {
         err = brackets.fs.NO_ERROR;
@@ -103,6 +123,9 @@ $.extend(true, brackets.fs, nodeFs , {
                     this(err, stats);
                 }.bind(callback));
             }
+            else if (githubHandler(path)) {
+		       githubStat (path, callback);
+            }
             else {
                 $.ajax({
                     url: path,
@@ -148,6 +171,9 @@ $.extend(true, brackets.fs, nodeFs , {
         })) {
             if (nodeFs)
                 nodeFs.readdir(path, callback);
+            else if (githubHandler(path)) {
+                readGithubDir(path, callback);
+            }
             else {
                 $.ajax({
                     url: path + "/manifest.json",
@@ -185,6 +211,9 @@ $.extend(true, brackets.fs, nodeFs , {
         })) {
             if(nodeFs)
                 nodeFs.mkdir(path, callback);
+            else if (githubHandler(path)) {
+                    MakeDir(path, permissions, callback);
+            }
             else {
                 callback(brackets.fs.ERR_CANT_WRITE);
             }
@@ -202,6 +231,9 @@ $.extend(true, brackets.fs, nodeFs , {
                     err = _nodeErrorToBracketsError(err);
                     this(err, data);
                 }.bind(callback));
+            else if (githubHandler(path)) {
+                readGithubFile(path, encoding, callback);
+            }
             else {
                 $.get(path, function (data, textStatus, jqXHR) {
                     var err = brackets.fs.NO_ERROR;
@@ -222,6 +254,9 @@ $.extend(true, brackets.fs, nodeFs , {
                 nodeFs.writeFile(path, data, encoding, function (err) {
                     callback(_nodeErrorToBracketsError(err));
                 });
+            else if (githubHandler(path)) {
+                writeGithubFile(path,data,encoding,callback);
+            }
             else {
                 callback(brackets.fs.NO_ERROR);
             }
@@ -245,7 +280,130 @@ function ShowOpenDialog ( callback, allowMultipleSelection, chooseDirectories,
           files.push(this.files[i].path.replace(/\\/g, "/"));
         callback(0, files);
     });
-} 
+}
+function MakeDir(path, permissions, callback){
+    var data = "# Ignore everything in this directory\n" + "*\n" + "# Except this file\n" + "!.gitignore";
+    repo.write(branch, path + "/.gitignore", data, "make dir", function (err) {
+        return callback (brackets.fs.ERR_CANT_WRITE);
+    });
+    callback (brackets.fs.NO_ERR);
+}
+function githubStat (path, callback) {
+    var tempPath = path.replace(githubPrefix,"");
+    userName = tempPath.substring(0,tempPath.indexOf("/"));
+    tempPath = tempPath.replace(userName+"/","") + "/";
+    repoName = tempPath.substring(0,tempPath.indexOf("/"));
+    console.log("the repoName is :" + repoName);
+    console.log("the userName is: " + userName);
+    repo = github.getRepo(userName, repoName);
+    // test whether this is only a repo
+    if (isRepo(path)) {
+        if (repo !== null) {
+            callback (brackets.fs.ERR_NO_ERROR, null);
+        } else {
+            callback (brackets.fs.ERR_NOT_FOUND, null);
+        }
+    }
+    else {
+        path = path.substring(dirLocation);
+        repo.getTree(branch+"?recursive=true", function (err, tree) {
+            var file = _.select(tree, function(file) {
+                return file.path === path;
+            })[0];
+            if (file) {
+                if (file.type === "tree") {
+                    callback (brackets.fs.NO_ERROR, {
+                        isDirectory: function () {
+                            return true;
+                        },
+                        isFile: function () {
+                            return false;
+                        },
+                        mtime: new Date()
+                    });
+                }
+                else {
+                    callback (brackets.fs.NO_ERROR, {
+                        isDirectory: function () {
+                            return false;
+                        },
+                        isFile: function () {
+                            return true;
+                        },
+                        mtime: new Date()
+                    });
+                }
+            }
+            else {
+                callback (brackets.fs.ERR_NOT_FOUND, null);
+            }
+        });
+    }
+}
+function readGithubDir(path, callback) {
+    if (isRepo(path)) {
+        path = path.substring(dirLocation, path.length);
+    }
+    else
+        path = path.substring(dirLocation, path.length-1);
+    repo.getSha(branch, path, function (err, res) {
+        if (res == null)
+    {
+        err = brackets.fs.ERR_NOT_FOUND;
+        callback (err, null);
+    }
+        else {
+            repo.getTree(res, function (err, result) {
+                if (!err)
+            {
+                var fileList = new Array();
+                for(var i = 0;i< result.length; i++) {
+                    fileList[i] = result[i].path;
+                }
+                console.log("the fileList is : " +fileList);
+                console.log(fileList);
+                callback (brackets.fs.NO_ERROR, fileList);
+            }
+                else {
+                    callback (brackets.fs.ERR_NOT_FOUND, null);
+                }
+            });
+        }
+    });
+}
+function readGithubFile (path, encoding, callback) {
+    // file path just like "tests/spec/gh3Spec.js"
+    path = path.substring(dirLocation, path.length);
+    repo.getSha(branch, path, function (err, res) {
+        // file doesn't exist
+        if (res == null)
+    {
+        err = brackets.fs.ERR_NOT_FOUND;
+        callback (err, null);
+    } 
+        else {
+            repo.getBlob(res, function (err, data) {
+                if (data == true)
+            {
+                err = brackets.fs.ERR_NOT_FOUND;
+                callback (err, null);
+            } else {
+                err = brackets.fs.NO_ERROR;
+                callback (err, data);
+            }
+
+            });
+        }
+    });
+}
+function writeGithubFile (path, data, encoding, callback) {
+    repo.write(branch, path.substring(path.lastIndexOf("/")+1), data, "yunpeng write file test", function (err) {
+        if(!err)
+        return callback (brackets.fs.NO_ERROR);
+        else   
+        callback(brackets.fs.NOT_FOUND_ERROR);
+    });
+}
 function ReadDir(){
     throw arguments.callee.name
 }
@@ -333,14 +491,6 @@ function OpenLiveBrowser(callback, url, enableRemoteDebugging){
                 var Inspector = require("LiveDevelopment/Inspector/Inspector");
                 var iframe = $('<iframe id="remoteEmulator" frameborder="0" style="overflow:hidden;width:100%;height:100%" height="100%" width="100%"></iframe>')
                         .attr("src", "http://" + location.hostname + ":" + 6080 + "/vnc.html")
-                        .load(function () {
-                            iframe.contents().find("#noVNC_canvas").click( function() {
-                                iframe[0].contentWindow.focus();
-                            });
-                            $(window).click( function () {
-                                window.focus();
-                            });
-                        })
                 var div = $('<div/>').append(iframe).css("overflow", "hidden")
                         .dialog({width:"550", height:"770", minWidth: "550",
                             minHeight: "770", position:"right",
@@ -349,20 +499,6 @@ function OpenLiveBrowser(callback, url, enableRemoteDebugging){
                                 Inspector.disconnect();
                             }
                         })
-                        .dialogExtend({
-                            "close" : true,
-                            "maximize" : true,
-                            "minimize" : true,
-                            "dblclick": "collapse"
-                        });
-                iframe.load( function () {
-                    iframe.contents().find("#noVNC_canvas").click( function () {
-                        iframe[0].contentWindow.focus();
-                    })
-                    $(window).click(function () {
-                        window.focus();
-                    })
-                })
                 $(Inspector).off('connect.RemoteEmulator');
                 $(Inspector).on('connect.RemoteEmulator', function () {
                     this.dialog("open");
