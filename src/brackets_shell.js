@@ -10,53 +10,6 @@ var ports = {};
 var nodeFs = require('fs');
 var os = require('os');
 var upDate = new Date();
-function getDropbox(callback) {
-    if (!window.dropbox) {
-            var Dialogs             = require("widgets/Dialogs");
-            var dropboxOAuthDriver = $.extend({}, new Dropbox.Drivers.Redirect ({rememberUser: true}), {
-                //url: function() { return ""; },
-                url: function() { return "";},
-                doAuthorize: function(authUrl, token, tokenSecret, callback) {
-                    var $dlg = $("." + Dialogs.DIALOG_ID_INFO + ".template")
-                        .clone()
-                        .removeClass("template")
-                        .addClass("instance")
-                        .appendTo(window.document.body);
-                    $(".dialog-title", $dlg).html("Welcome to use Dropbox as your project storage");
-                    $(".dialog-message", $dlg).html("A new window will be opened for Dropbox now. Please login and click 'Allow' to allow us to use your dropbox as a project storage. Don't forget to close the window after allowing");
-                    $dlg.one("click", ".dialog-button", function (e) {
-                        $dlg.modal(true).hide();
-                        var w = window.showModalDialog(authUrl, null, "dialogWidth:950; dialogHeight:550;dialogLeft:300");
-                        callback(token);
-                    });
-                    $dlg.modal({
-                        backdrop: "static",
-                        show: true,
-                        keyboard: true
-                    });
-                }
-            });
-
-            window.dropbox = new Dropbox.Client({
-                key: "xbfa6vr2n1nk082", secret: "dze5e13g0j4vf07", sandbox: true
-            });
-
-            //dropbox.authDriver(new Dropbox.Drivers.Redirect({ rememberUser: true}));
-            dropbox.authDriver(dropboxOAuthDriver);
-            dropbox.authenticate(callback);
-    }
-    else
-        callback(null, dropbox);
-}
-function dropboxHandler(path, callback) {
-    if (path.indexOf("dropbox://") === 0) {
-        getDropbox(function (err, dropbox) {
-            callback(path.replace("dropbox://", ""), dropbox);
-        });
-        return true;
-    }
-    return false;
-}
 function _nodeErrorToBracketsError (err) {
     if (!err) {
         err = brackets.fs.NO_ERROR;
@@ -75,159 +28,6 @@ function _dropboxErrorToBracketsError (err) {
     }
     return err;
 }
-$.extend(true, brackets.fs, nodeFs , {
-    stat: function (path, callback) {
-        if (!dropboxHandler(path, function (path, dropbox) {
-            dropbox.stat(path, function(err, stats) {
-                if (!err) {
-                    err = brackets.fs.NO_ERROR;
-                    stats.isDirectory =  function () {
-                        return this.isFolder;
-                    }.bind(stats)
-                    stats.isFile =  function () {
-                        return this.isFile;
-                    }.bind($.extend({}, stats))
-                    stats.mtime = stats.modifiedAt;
-                }
-                if (err && err.status === 404) {
-                    err = brackets.fs.ERR_NOT_FOUND;
-                }
-                this(err, stats);
-            }.bind(callback));
-        })) {
-            if (nodeFs) {
-                nodeFs.stat(path, function (err, stats) {
-                    err = _nodeErrorToBracketsError(err);
-                    if (!err)
-                        stats.mtime = new Date();
-                    this(err, stats);
-                }.bind(callback));
-            }
-            else {
-                $.ajax({
-                    url: path,
-                    type: "HEAD",
-                    dataType: "html",
-                    error: function( jqXHR, textStatus, errorThrown) {
-                        if (jqXHR.status === 403) {
-                            this.callback(brackets.fs.NO_ERROR, {
-                                isDirectory: function () {
-                                    return true;
-                                },
-                                isFile: function () {
-                                    return false;
-                                },
-                                mtime: new Date()
-                            });
-                        }
-                        else {
-                            console.warn("stat " + path + " " + textStatus + ": " + errorThrown);
-                            this.callback(brackets.fs.ERR_NOT_FOUND);
-                        }
-                    }.bind({path: path, callback:callback}),
-                    success: function(data, textStatus, jqXHR){
-                        this(brackets.fs.NO_ERROR, {
-                            isDirectory: function () {
-                                return this.getResponseHeader("IsDirectory");
-                            }.bind(jqXHR),
-                            isFile: function () {
-                                return !this.getResponseHeader("IsDirectory");
-                            }.bind(jqXHR),
-                            mtime: new Date(jqXHR.getResponseHeader("Last-Modified"))
-                        });
-                    }.bind(callback)
-                });
-            }
-        }
-    },
-    readdir: function (path, callback ) {
-        if (!dropboxHandler(path, function (path, dropbox) {
-            dropbox.readdir(path.replace("dropbox://", ""), function(error, fileNames, folder, files) {
-                this(error, fileNames);
-            }.bind(callback));
-        })) {
-            if (nodeFs)
-                nodeFs.readdir(path, callback);
-            else {
-                $.ajax({
-                    url: path + "/manifest.json",
-                    dataType: 'json',
-                    data: '{}',
-                    headers: {
-                        Accept : "text/json; charset=utf-8"
-                    },
-                    error: function (jqXHR, textStatus, errorThrown) {
-                        console.error("getting " + path + " failed:" + errorThrown);
-                    },
-                    success: function (data, textStatus, jqXHR) {
-                        var err = brackets.fs.NO_ERROR;
-                        var files;
-                        if (jqXHR.status === 404)
-                            err = brackets.fs.ERR_NOT_FOUND;
-                        if (data) {
-                            files = [];
-                            $(data).find('tr > td > a').each(function (i, link) {
-                                if ($(link).text() !== "Parent Directory")
-                                    files.push($(link).attr('href'));
-                            })
-                        }
-                        this(err, data);
-                    }.bind(callback)
-                });
-            }
-        }
-    },
-    makedir: function (path, permissions, callback ) {
-        if (!dropboxHandler(path, function (path, dropbox) {
-            dropbox.mkdir(path, function (err, stat) {
-                callback && callback(_dropboxErrorToBracketsError(err));
-            });
-        })) {
-            if(nodeFs)
-                nodeFs.mkdir(path, callback);
-            else {
-                callback(brackets.fs.ERR_CANT_WRITE);
-            }
-        }
-    },
-    readFile: function (path, encoding, callback ) {
-        if (!dropboxHandler(path, function (path, dropbox) {
-            dropbox.readFile(path, {binary:true}, function (err, data) {
-                err = _dropboxErrorToBracketsError(err);
-                this(err, data);
-            }.bind(this));
-        }.bind(callback))) {
-            if (nodeFs)
-                nodeFs.readFile(path, encoding, function (err, data) {
-                    err = _nodeErrorToBracketsError(err);
-                    this(err, data);
-                }.bind(callback));
-            else {
-                $.get(path, function (data, textStatus, jqXHR) {
-                    var err = brackets.fs.NO_ERROR;
-                    if (jqXHR.status === 404)
-                        err = brackets.fs.ERR_NOT_FOUND;
-                    this(err, data);
-                }.bind(callback), "html")
-            }
-        }
-    },
-    writeFile: function (path, data, encoding, callback ) {
-        if (!dropboxHandler(path, function (path, dropbox) {
-            dropbox.writeFile(path, data, {binary:true}, function (err) {
-                callback(_dropboxErrorToBracketsError(err))
-            });
-        })){
-            if (nodeFs)
-                nodeFs.writeFile(path, data, encoding, function (err) {
-                    callback(_nodeErrorToBracketsError(err));
-                });
-            else {
-                callback(brackets.fs.NO_ERROR);
-            }
-        }
-    }
-});
 var execDeviceCommand = function (cmd, callback) {
     console.log("cmd:" +  cmd);
     child_process.exec("sdb -s " + window.device + " " + cmd, callback);
@@ -245,7 +45,7 @@ function ShowOpenDialog ( callback, allowMultipleSelection, chooseDirectories,
           files.push(this.files[i].path.replace(/\\/g, "/"));
         callback(0, files);
     });
-} 
+}
 function ReadDir(){
     throw arguments.callee.name
 }
@@ -333,14 +133,6 @@ function OpenLiveBrowser(callback, url, enableRemoteDebugging){
                 var Inspector = require("LiveDevelopment/Inspector/Inspector");
                 var iframe = $('<iframe id="remoteEmulator" frameborder="0" style="overflow:hidden;width:100%;height:100%" height="100%" width="100%"></iframe>')
                         .attr("src", "http://" + location.hostname + ":" + 6080 + "/vnc.html")
-                        .load(function () {
-                            iframe.contents().find("#noVNC_canvas").click( function() {
-                                iframe[0].contentWindow.focus();
-                            });
-                            $(window).click( function () {
-                                window.focus();
-                            });
-                        })
                 var div = $('<div/>').append(iframe).css("overflow", "hidden")
                         .dialog({width:"550", height:"770", minWidth: "550",
                             minHeight: "770", position:"right",
@@ -349,20 +141,6 @@ function OpenLiveBrowser(callback, url, enableRemoteDebugging){
                                 Inspector.disconnect();
                             }
                         })
-                        .dialogExtend({
-                            "close" : true,
-                            "maximize" : true,
-                            "minimize" : true,
-                            "dblclick": "collapse"
-                        });
-                iframe.load( function () {
-                    iframe.contents().find("#noVNC_canvas").click( function () {
-                        iframe[0].contentWindow.focus();
-                    })
-                    $(window).click(function () {
-                        window.focus();
-                    })
-                })
                 $(Inspector).off('connect.RemoteEmulator');
                 $(Inspector).on('connect.RemoteEmulator', function () {
                     this.dialog("open");
