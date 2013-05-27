@@ -39,7 +39,8 @@ define(function (require, exports, module) {
         ExtensionUtils         = brackets.getModule("utils/ExtensionUtils"),
         FileUtils              = brackets.getModule("file/FileUtils"),
         Commands               = brackets.getModule("command/Commands"),
-        Menu                   = brackets.getModule("command/Menus");
+        Menu                   = brackets.getModule("command/Menus"),
+        githubFs              = brackets.getModule("fsDrives/githubFs");
     var OPEN_MENU_NAME   = "Open Github Project...",
         OPEN_COMMAND_ID  = "github.open";
     var githublib              = require("github"),
@@ -57,14 +58,12 @@ define(function (require, exports, module) {
         username,
         path,
         repoList;
-    /**
-     * Invoke Tizen project conversions dialog.
-     */
     function loadGithubProject() {
-            getGithub();
+        githubFs.getGithub(function(token){
+            access_token = token;
+            performOajax();
+        });
     }
-
-    
     /**
      * Read repo of Github and populate the Open Folder dialog with the list of files
      * @param github
@@ -74,67 +73,14 @@ define(function (require, exports, module) {
     /**
      * Load Tizen project extension.
      */
-    function getGithub() {
-        var $dlg = $("." + Dialogs.DIALOG_ID_INFO + ".template")
-                .clone()
-                .removeClass("template")
-                .addClass("instance")
-                .appendTo(window.document.body);
-                $(".dialog-title", $dlg).html("Welcome to use Github as your project storage");
-                $(".dialog-message", $dlg).html("A new window will be opened for Github now. Please login and click 'Allow' to allow us to use your github as a project storage. Don't forget to close the window after allowing");
-                $dlg.one("click", ".dialog-button", function (e) {
-                    $dlg.modal(true).hide();
-                    access_token = jso_getToken("github" ,["repo","user"]);
-                    console.log(access_token);
-                    if (access_token == null) {
-                        doOauth();
-                    }
-                    else{
-                        doJsoConfigure(url);
-                        performOajax();
-                    }
-                });
-                $dlg.modal({
-                backdrop: "static",
-                show: true,
-                keyboard: true
-                });
-    }
-    function doOauth() {
-        var client_id = "461a47b142a0daac99bd",
-            client_secret = "9adb3fe4a3d471c38541ed785add8fca466e41ee",
-            forTokenUrl = "https://api.github.com/user#access_token=",
-            getTokenUrl = "https://github.com/login/oauth/access_token",
-            code,
-            state,
-            win;
-        doJsoConfigure(url);
-        jso_registerRedirectHandler(function(url) {
-            var win = window.open(url); 
-            setTimeout(function checkClose() {
-                if (win.closed) {
-                    var uri = window.authURL;
-                    code = uri.substring((uri.indexOf("code=")+5),uri.indexOf("&state"));
-                    state = uri.substring(uri.indexOf("state=")+6);
-                    getTokenUrl = getTokenUrl+ "?client_id=" + client_id + "&client_secret=" + client_secret + "&code=" + code;
-                    console.log(getTokenUrl);
-                    $.get(getTokenUrl, function(data , status){
-                        access_token = data.substring(13, data.indexOf("&"));
-                        jso_checkfortoken('github', forTokenUrl+access_token,function() {
-                            console.log("the forTokenUrl+access_token url is " + forTokenUrl+access_token);
-                        });
-                        performOajax();
-                    });
-                }
-                else
-                    setTimeout(checkClose, 100)
-            }, 100);
-        });
-        jso_ensureTokens({
-            "github": ["repo", "user"],
-        })
-    }
     function performOajax() {
+       if(!window.github) {
+           window.github = new Github ({
+                token : access_token,
+                auth : "oauth"
+            });
+       }
+       var user = github.getUser();
         $.oajax({
             type: "GET",
             url: userUrl+ access_token,
@@ -143,12 +89,6 @@ define(function (require, exports, module) {
             dataType: 'json',
             sync : false,
             success: function(data) {
-                   window.github = new Github ({
-                    token : access_token,
-                    auth : "oauth"
-                });
-                //get the user repoList
-                var user = github.getUser();
                 username = data["login"];
                 console.log("the username is :" + username);
                 user.userRepos(String(username), function(err, content) {
@@ -162,8 +102,9 @@ define(function (require, exports, module) {
                 },
             error: function(jqXHR, textStatus, errorThrown) {
                 alert(jqXHR.status);
-                alert(errorThrown); }
-            });
+                alert(errorThrown); 
+            }
+        });
     }
     function readGithubRepo(repoList, path) {
         console.log("the repoList is :");
@@ -178,15 +119,15 @@ define(function (require, exports, module) {
         }
         $('.github-user').html('Github user: ' + username);
         $('.github-file-rows').empty();
-            var len = folder.length;
-            for (var i = 0; i<len ; i++) {
-                repo[i] = folder[i].substring((folder[i].lastIndexOf("/"))+1);
-                $('.github-file-rows').append('<tr data-path=' + folder[i] +  ' class="file-row"' +
-                        '><td class="file-icon">' +
-                        '<img src= ' + moduleDir + "/img/" +  "folder.png"+'> '+'</td>' +'<td>'+
-                        repo[i] +
-                        '</td>');
-            }
+        var len = folder.length;
+        for (var i = 0; i<len ; i++) {
+            repo[i] = folder[i].substring((folder[i].lastIndexOf("/"))+1);
+            $('.github-file-rows').append('<tr data-path=' + folder[i] +  ' class="file-row"' +
+                    '><td class="file-icon">' +
+                    '<img src= ' + moduleDir + "/img/" +  "folder.png"+'> '+'</td>' +'<td>'+
+                    repo[i] +
+                    '</td>');
+        }
         Dialogs.showModalDialog("gh-open-folder-dialog");
     }
     function readGithubFolder(github, path) {
@@ -225,16 +166,16 @@ define(function (require, exports, module) {
                     projMenu.addMenuItem(OPEN_COMMAND_ID, "", Menu.LAST_IN_SECTION, 
                     Menu.MenuSection.FILE_LIVE);
         moduleDir = FileUtils.getNativeModuleDirectoryPath(module);
-        $('body').on('mouseover', '.file-row', function(event) {
-            $(event.currentTarget).addClass('highlight');
-        });
-        $('body').on('mouseout', '.file-row', function(event) {
-            $(event.currentTarget).removeClass('highlight');
-        });
-        $('body').on('click', '.file-row', function(event) {
-            readGithubFolder(github, $(event.currentTarget).data('path'));
-        });
-    }
-    //Initialize
+            $('body').on('mouseover', '.file-row', function(event) {
+                $(event.currentTarget).addClass('highlight');
+            });
+
+            $('body').on('mouseout', '.file-row', function(event) {
+                $(event.currentTarget).removeClass('highlight');
+            });
+            $('body').on('click', '.file-row', function(event) {
+                readGithubFolder(github, $(event.currentTarget).data('path'));
+            });
+        }
     initialGithub();
 });
