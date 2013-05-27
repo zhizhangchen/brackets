@@ -69,9 +69,14 @@ function githubHandler(path) {
     else
         return false;
 }
+function splitPath(path) {
+    var subPath = path.split("/");
+    return subPath;
+}
 function isRepo(path) {
-    dirLocation = path.indexOf(repoName)+repoName.length+1;
-    var url = githubPrefix + userName + "/" + repoName;
+    var subPath = splitPath(path);
+    dirLocation = subPath[0].length + subPath[1].length + 2;
+    var url =  userName + "/" + repoName;
     if (url === path || (url + '/') === path)
         return true;
     else 
@@ -124,6 +129,7 @@ $.extend(true, brackets.fs, nodeFs , {
                 }.bind(callback));
             }
             else if (githubHandler(path)) {
+               path = path.replace(githubPrefix,"");
 		       githubStat (path, callback);
             }
             else {
@@ -172,6 +178,7 @@ $.extend(true, brackets.fs, nodeFs , {
             if (nodeFs)
                 nodeFs.readdir(path, callback);
             else if (githubHandler(path)) {
+                path = path.replace(githubPrefix,"");
                 readGithubDir(path, callback);
             }
             else {
@@ -212,7 +219,8 @@ $.extend(true, brackets.fs, nodeFs , {
             if(nodeFs)
                 nodeFs.mkdir(path, callback);
             else if (githubHandler(path)) {
-                    MakeDir(path, permissions, callback);
+                path = path.replace(githubPrefix,"");
+                MakeDir(path, permissions, callback);
             }
             else {
                 callback(brackets.fs.ERR_CANT_WRITE);
@@ -232,6 +240,7 @@ $.extend(true, brackets.fs, nodeFs , {
                     this(err, data);
                 }.bind(callback));
             else if (githubHandler(path)) {
+                path = path.replace(githubPrefix,"");
                 readGithubFile(path, encoding, callback);
             }
             else {
@@ -255,6 +264,7 @@ $.extend(true, brackets.fs, nodeFs , {
                     callback(_nodeErrorToBracketsError(err));
                 });
             else if (githubHandler(path)) {
+                path = path.replace(githubPrefix,"");
                 writeGithubFile(path,data,encoding,callback);
             }
             else {
@@ -284,22 +294,20 @@ function ShowOpenDialog ( callback, allowMultipleSelection, chooseDirectories,
 function MakeDir(path, permissions, callback){
     var data = "# Ignore everything in this directory\n" + "*\n" + "# Except this file\n" + "!.gitignore";
     repo.write(branch, path + "/.gitignore", data, "make dir", function (err) {
-        return callback (brackets.fs.ERR_CANT_WRITE);
+	return callback (brackets.fs.ERR_CANT_WRITE);
     });
     callback (brackets.fs.NO_ERR);
 }
 function githubStat (path, callback) {
-    var tempPath = path.replace(githubPrefix,"");
-    userName = tempPath.substring(0,tempPath.indexOf("/"));
-    tempPath = tempPath.replace(userName+"/","") + "/";
-    repoName = tempPath.substring(0,tempPath.indexOf("/"));
+    var subPath = splitPath(path);
+    userName = subPath[0]; 
+    repoName = subPath[1]; 
     console.log("the repoName is :" + repoName);
     console.log("the userName is: " + userName);
     repo = github.getRepo(userName, repoName);
-    // test whether this is only a repo
     if (isRepo(path)) {
         if (repo !== null) {
-            callback (brackets.fs.ERR_NO_ERROR, null);
+            callback (brackets.fs.NO_ERROR, null);
         } else {
             callback (brackets.fs.ERR_NOT_FOUND, null);
         }
