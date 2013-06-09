@@ -1,0 +1,23 @@
+.gh-open-folder-dialog .highlight {
+    background-color: blue;
+    color: white;
+}
+
+.gh-open-folder-dialog td {
+    vertical-align: middle;
+}
+
+.gh-open-folder-dialog .file-icon {
+    text-align: center;
+    width: 30px;
+}
+
+
+.github-path {
+    padding-bottom: 12px;
+}
+
+.github-user {
+    padding-top: 0px;
+    padding-bottom: 6px;
+}
